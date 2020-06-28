@@ -35,6 +35,47 @@ SDE <- R6Class(
         #' @description Return type of SDE object
         type = function() {return(private$type_)},
         
+        #' @description Return type of SDE object as integer code
+        type_code = function() {
+            switch (self$type(),
+                    "BM" = 1,
+                    "OU" = 2)
+        },
+        
+        #' @description Output of optimiser after model fitting
+        res = function() {
+            if (is.null(private$fit_)) {
+                stop("Fit model first")
+            }
+            
+            return(private$fit_)
+        },
+        
+        #' @description Model object created by TMB. This is the output of 
+        #' the TMB function \code{MakeADFun}, and it is a list including elements
+        #' \itemize{
+        #'   \item{\code{fn}}{Objective function}
+        #'   \item{\code{gr}}{Gradient function of fn}
+        #'   \item{\code{par}}{Vector of initial parameters on working scale}
+        #' }
+        tmb_obj = function() {
+            if(is.null(private$tmb_obj_)) {
+                stop("Setup model first")
+            }
+            
+            return(private$tmb_obj_)
+        },
+        
+        #' @description Output of the TMB function \code{sdreport}, which includes 
+        #' estimates and standard errors for all model parameters.
+        tmb_rep = function() {
+            if(is.null(private$tmb_rep_)) {
+                stop("Fit model first")
+            }
+            
+            return(private$tmb_rep_)
+        },
+        
         ###################
         ## Other methods ##
         ###################
@@ -97,20 +138,94 @@ SDE <- R6Class(
             return(list(X_fe = X_fe, X_re = X_re, S = S, ncol_re = ncol_re))
         },
         
-        #' @description Setup model
-        setup = function() {
-            return(NULL)
+        #' @description TMB setup
+        #'  
+        #' This creates an attribute \code{tmb_obj}, which can be used to 
+        #' evaluate the negative log-likelihood function.
+        #' 
+        #' @param silent Logical. If TRUE, all tracing outputs are hidden (default).
+        setup = function(silent = TRUE) {
+            # Create model matrices
+            mats <- self$make_mats()
+            X_fe <- mats$X_fe
+            X_re <- mats$X_re
+            S <- mats$S
+            ncol_re <- mats$ncol_re
+            
+            # Format initial parameters for TMB
+            tmb_par <- list(coeff_fe = rep(0, ncol(X_fe)),
+                            coeff_re = 0,
+                            log_lambda = 0)
+            
+            # Setup random effects
+            map <- NULL
+            random <- NULL
+            if(is.null(S)) {
+                # If there are no random effects, 
+                # coeff_re and log_lambda are not estimated
+                map <- c(map, list(coeff_re = factor(NA),
+                                   log_lambda = factor(NA)))
+                S <- as(matrix(0, 1, 1), "sparseMatrix")
+                ncol_re <- 0
+                X_re <- as(rep(0, nrow(X_fe)), "sparseMatrix")
+            } else {
+                # If there are random effects, 
+                # set initial values for coeff_re and log_lambda
+                random <- c(random, "coeff_re")
+                tmb_par$coeff_re <- rep(0, ncol(S))
+                tmb_par$log_lambda <- rep(0, length(ncol_re))
+            }
+            
+            # TMB data object
+            tmb_dat <- list(ID = self$data()$ID,
+                            times = self$data()$time,
+                            Z = as.matrix(self$data()$Z),
+                            X_fe = X_fe,
+                            X_re = X_re,
+                            S = S,
+                            ncol_re = ncol_re,
+                            type = self$type_code())
+            
+            # Create TMB object
+            tmb_obj <- MakeADFun(data = tmb_dat, parameters = tmb_par, 
+                                 dll = "smoothSDE", silent = silent,
+                                 map = map, random = random)
+            
+            # Negative log-likelihood function
+            private$tmb_obj_ <- tmb_obj
         },
         
-        #' @description Fit model 
-        fit = function() {
-            return(NULL)
+        #' @description Model fitting
+        #' 
+        #' The negative log-likelihood of the model is minimised using the
+        #' function \code{optim}. TMB uses the Laplace approximation to integrate 
+        #' the random effects out of the likelihood.
+        #' 
+        #' After the model has been fitted, the output of \code{optim} can be
+        #' accessed using the method \code{res}.
+        #' 
+        #' @param silent Logical. If TRUE, all tracing outputs are hidden (default).
+        fit = function(silent = TRUE) {
+            # Setup if necessary
+            if(is.null(private$tmb_obj_)) {
+                self$setup(silent = silent)
+            }
+            
+            # Fit model
+            private$fit_ <- do.call(optim, private$tmb_obj_)
+            
+            # Get estimates and precision matrix for all parameters
+            private$tmb_rep_ <- sdreport(private$tmb_obj_)
+            par_list <- as.list(private$tmb_rep_, "Estimate")
         }
     ),
     
     private = list(
         formulas_ = NULL,
         data_ = NULL,
-        type_ = NULL
+        type_ = NULL,
+        tmb_obj_ = NULL,
+        fit_ = NULL,
+        tmb_rep_ = NULL
     )
 )
