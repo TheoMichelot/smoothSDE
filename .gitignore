@@ -38,3 +38,10 @@ vignettes/*.pdf
 # R Environment Variables
 .Renviron
 .Rproj.user
+
+# C++ compilation files
+src/*.so
+src/*.o
+
+.Rbuildignore
+*.Rproj
