@@ -11,34 +11,43 @@ SDE <- R6Class(
         #################
         #' @description Create a SDE object
         #' 
-        #' @param formulas Nested list of formulas for model
-        #' parameters
-        #' @param data Data frame with covariates, response variables,
+        #' @param formulas List of formulas for model parameters
+        #' @param data Data frame with covariates, response variable,
         #' time, and ID
-        #' @param models List of model names for observed processes
+        #' @param type Type of SDE ("BM", "OU"...)
         #' 
-        #' @return A new Dist object
-        initialize = function(formulas, data, models) {
+        #' @return A new SDE object
+        initialize = function(formulas, data, type) {
             private$formulas_ <- formulas
             private$data_ <- data
-            private$models_ <- models
+            private$type_ <- type
         },
         
         ###############
         ## Accessors ##
         ###############
-        #' @description Return name of Dist object
+        #' @description Return formulas of SDE object
         formulas = function() {return(private$formulas_)},
         
-        #' @description Return pdf of Dist object
+        #' @description Return data of SDE object
         data = function() {return(private$data_)},
         
-        #' @description Return random generator function of Dist object
-        models = function() {return(private$models_)},
+        #' @description Return type of SDE object
+        type = function() {return(private$type_)},
         
         ###################
         ## Other methods ##
         ###################
+        #' @description Make model matrices
+        make_mats() = function() {
+            return(NULL)
+        },
+        
+        #' @description Setup model
+        setup = function() {
+            return(NULL)
+        },
+        
         #' @description Fit model 
         fit = function() {
             return(NULL)
@@ -48,6 +57,6 @@ SDE <- R6Class(
     private = list(
         formulas_ = NULL,
         data_ = NULL,
-        models_ = NULL
+        type_ = NULL
     )
 )
