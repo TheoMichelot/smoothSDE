@@ -1,0 +1,2 @@
+useDynLib(smooth_sde)
+exportPattern("^[[:alpha:]]+")

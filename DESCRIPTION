@@ -1,0 +1,12 @@
+Package: smoothSDE
+Type: Package
+Title: Varying-coefficient stochastic differential equations
+Version: 0.1
+Author: Theo Michelot
+Maintainer: Theo Michelot <tm75@st-andrews.ac.uk>
+Description: Provides functions to fit stochastic differential
+    equations with time-varying parameters.
+License: GPL-3
+Encoding: UTF-8
+Depends: R6, mgcv, TMB, RcppEigen, Matrix, ggplot2
+LinkingTo: TMB, RcppEigen
