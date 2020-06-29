@@ -232,7 +232,7 @@ SDE <- R6Class(
             tmb_dat <- list(type = self$type(),
                             ID = self$data()$ID,
                             times = self$data()$time,
-                            Z = as.matrix(self$data()$Z),
+                            obs = as.matrix(self$data()$Z),
                             X_fe = X_fe,
                             X_re = X_re,
                             S = S,

@@ -19,14 +19,14 @@ Type std_sde(objective_function<Type>* obj) {
     DATA_STRING(type); // Model type for each response variable
     DATA_VECTOR(ID); // Time series ID
     DATA_VECTOR(times); // Observation times
-    DATA_MATRIX(Z); // Response variables
+    DATA_MATRIX(obs); // Response variables
     DATA_SPARSE_MATRIX(X_fe); // Design matrix for fixed effects
     DATA_SPARSE_MATRIX(X_re); // Design matrix for random effects
     DATA_SPARSE_MATRIX(S); // Penalty matrix
     DATA_IVECTOR(ncol_re); // Number of columns of S and X_re for each random effect
     
     // Number of observations
-    int n = Z.rows();
+    int n = obs.rows();
     // Time intervals
     vector<Type> dtimes = diff(times);
     
@@ -55,7 +55,7 @@ Type std_sde(objective_function<Type>* obj) {
     for(int i = 1; i < n; i ++) {
         // No contribution if first observation of the track
         if(ID(i-1) == ID(i)) {
-            llk = llk + tr_dens<Type>(Z(i, 0), Z(i-1, 0), dtimes(i-1), 
+            llk = llk + tr_dens<Type>(obs(i, 0), obs(i-1, 0), dtimes(i-1), 
                                       par_mat.row(i-1), true, type);
         }
     }
