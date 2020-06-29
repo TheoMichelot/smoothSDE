@@ -14,6 +14,12 @@ true_mu <- function(x) {
     return(mu)
 }
 
+## Diffusion function
+true_sigma <- function(x) {
+    sigma <- exp(cos(2 * pi * x))
+    return(sigma)
+}
+
 ## Simulation function for dZ_t = mu(x1) dt + dW_t
 sim_SDE <- function(times, x1) {
     ## Number of points to simulate
@@ -22,9 +28,10 @@ sim_SDE <- function(times, x1) {
     dt <- diff(times)
     ## Compute drift from covariates
     all_mu <- true_mu(x1)
+    all_sigma <- true_sigma(x1)
     
     ## Generate normal increments for process Z
-    dZ <- rnorm(n = n-1, mean = all_mu[-n]*dt, sd = sqrt(dt))
+    dZ <- rnorm(n = n-1, mean = all_mu[-n]*dt, sd = all_sigma[-n]*sqrt(dt))
     ## Compute process Z
     Z <- cumsum(c(0, dZ))
     
@@ -43,9 +50,9 @@ x1_all <- (x1_raw - min(x1_raw))/(max(x1_raw) - min(x1_raw))
 ## Simulate data
 Z_all <- sim_SDE(times = times_all, x1 = x1_all)
 
-## Thin observations *regularly* (for estimation)
+## Thin observations (for estimation)
 n_obs <- 1e3
-ind_obs <- seq(1, n_all, length = n_obs)
+ind_obs <- sort(sample(1:n_all, size = n_obs, replace = FALSE))
 Z <- Z_all[ind_obs]
 x1 <- x1_all[ind_obs]
 times <- times_all[ind_obs]
@@ -53,15 +60,12 @@ times <- times_all[ind_obs]
 #################
 ## Setup model ##
 #################
-formulas <- list(mu = ~ s(x1, k = 10, bs = "ts"), sigma = ~1)
+formulas <- list(mu = ~ s(x1, k = 10, bs = "cs"), 
+                 sigma = ~ s(x1, k = 10, bs = "cs"))
 data <- data.frame(ID = 1, Z = Z, x1 = x1, time = times)
 type <- "BM"
 my_sde <- SDE$new(formulas = formulas, data = data, type = type)
 my_sde$fit(silent = FALSE)
-
-mats <- my_sde$make_mat_grid(var = "x1")
-par <- my_sde$par_all(X_fe = mats$X_fe, X_re = mats$X_re)
-
 my_sde$plot_par("x1", n_post = 100)
 
 #' TODO:
