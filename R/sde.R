@@ -285,6 +285,53 @@ SDE <- R6Class(
             return(par_mat)
         },
         
+        #' @description Posterior draws for uncertainty quantification
+        #' 
+        #' @param X_fe Design matrix (fixed effects)
+        #' @param X_re Design matrix (random effects)
+        #' @param n_post Number of posterior draws 
+        post = function(X_fe, X_re, n_post = 100) {
+            # Number of parameters
+            n_par <- length(self$formulas())
+            # Number of time steps
+            n <- nrow(X_fe)/n_par
+            
+            # TMB report
+            rep <- self$tmb_rep()
+            
+            # Joint covariance matrix
+            jointCov <- as.matrix(solve(rep$jointPrecision))
+            colnames(jointCov) <- colnames(rep$jointPrecision)
+            
+            # Vector of all parameters
+            par_all <- c(rep$par.fixed, rep$par.random)
+            
+            # Make sure that parameters have the same order in vector of estimates
+            # and in covariance matrix
+            if(!all(names(par_all) == colnames(jointCov)))
+                stop("Check TMB parameter order (should be fixed first, then random)")
+            
+            # Posterior draws from MVN(par_all, jointCov)
+            par_post <- rmvn(n = n_post, mu = par_all, V = jointCov)
+            
+            post_fe <- par_post[, which(colnames(par_post) == "coeff_fe")]
+            post_re <- par_post[, which(colnames(par_post) == "coeff_re")]
+            lp_post <- X_fe %*% t(post_fe) + X_re %*% t(post_re)
+            
+            lp_array <- array(lp_post, dim = c(n, n_par, n_post))
+            
+            par_array <- array(NA, dim = c(n, n_par, n_post))
+            for(i in 1:dim(lp_array)[2]) {
+                par_array[,i,] <- self$invlink()[[i]](lp_array[,i,])
+            }
+            dimnames(par_array)[[2]] <- names(self$invlink())
+            
+            return(par_array)
+        },
+        
+        ######################
+        ## Plotting methods ##
+        ######################
         #' @description Plot observation parameters
         #' 
         #' @param var Name of covariate as a function of which the parameters
@@ -329,7 +376,15 @@ SDE <- R6Class(
             if(ncol(mats$new_data) > 1) {
                 other_covs <- mats$new_data[1, which(colnames(mats$new_data) != var), 
                                             drop = FALSE]
-                plot_txt <- paste(colnames(other_covs), "=", round(other_covs, 2), 
+                
+                # Round numeric values, and transform factors to strings
+                num_ind <- sapply(other_covs, is.numeric)
+                other_covs[num_ind] <- lapply(other_covs[num_ind], function(cov) 
+                    round(cov, 2))
+                fac_ind <- sapply(other_covs, is.factor)
+                other_covs[fac_ind] <- lapply(other_covs[fac_ind], as.character)
+                
+                plot_txt <- paste(colnames(other_covs), "=", other_covs, 
                                   collapse = ", ")
             }
             
@@ -347,50 +402,6 @@ SDE <- R6Class(
                       strip.text = element_text(colour = "black"))
             
             return(p)
-        },
-        
-        #' @description Posterior draws for uncertainty quantification
-        #' 
-        #' @param X_fe Design matrix (fixed effects)
-        #' @param X_re Design matrix (random effects)
-        #' @param n_post Number of posterior draws 
-        post = function(X_fe, X_re, n_post = 100) {
-            # Number of parameters
-            n_par <- length(self$formulas())
-            # Number of time steps
-            n <- nrow(X_fe)/n_par
-            
-            # TMB report
-            rep <- self$tmb_rep()
-            
-            # Joint covariance matrix
-            jointCov <- as.matrix(solve(rep$jointPrecision))
-            colnames(jointCov) <- colnames(rep$jointPrecision)
-            
-            # Vector of all parameters
-            par_all <- c(rep$par.fixed, rep$par.random)
-            
-            # Make sure that parameters have the same order in vector of estimates
-            # and in covariance matrix
-            if(!all(names(par_all) == colnames(jointCov)))
-                stop("Check TMB parameter order (should be fixed first, then random)")
-            
-            # Posterior draws from MVN(par_all, jointCov)
-            par_post <- rmvn(n = n_post, mu = par_all, V = jointCov)
-            
-            post_fe <- par_post[, which(colnames(par_post) == "coeff_fe")]
-            post_re <- par_post[, which(colnames(par_post) == "coeff_re")]
-            lp_post <- X_fe %*% t(post_fe) + X_re %*% t(post_re)
-            
-            lp_array <- array(lp_post, dim = c(n, n_par, n_post))
-            
-            par_array <- array(NA, dim = c(n, n_par, n_post))
-            for(i in 1:dim(lp_array)[2]) {
-                par_array[,i,] <- self$invlink()[[i]](lp_array[,i,])
-            }
-            dimnames(par_array)[[2]] <- names(self$invlink())
-            
-            return(par_array)
         }
     ),
     
