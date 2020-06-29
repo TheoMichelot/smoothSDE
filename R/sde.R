@@ -26,21 +26,34 @@ SDE <- R6Class(
         ###############
         ## Accessors ##
         ###############
-        #' @description Return formulas of SDE object
+        #' @description Formulas of SDE object
         formulas = function() {return(private$formulas_)},
         
-        #' @description Return data of SDE object
+        #' @description Data of SDE object
         data = function() {return(private$data_)},
         
-        #' @description Return type of SDE object
+        #' @description Type of SDE object
         type = function() {return(private$type_)},
         
-        #' @description Return type of SDE object as integer code
+        #' @description Type of SDE object as integer code
         type_code = function() {
             switch (self$type(),
                     "BM" = 1,
                     "OU" = 2)
         },
+        
+        #' @description Inverse link functions
+        invlink = function() {
+            switch (self$type(),
+                    "BM" = list(mu = identity, sigma = exp),
+                    "OU" = list(mu = identity, beta = exp, sigma = exp))
+        },
+        
+        #' @description Fixed effect parameters
+        coeff_fe = function() {return(private$coeff_fe_)},
+        
+        #' @description Random effect parameters
+        coeff_re = function() {return(private$coeff_re_)},
         
         #' @description Output of optimiser after model fitting
         res = function() {
@@ -91,7 +104,7 @@ SDE <- R6Class(
         #'   \item S Smoothness matrix
         #'   \item ncol_re Number of columns of X_re and S for each random effect
         #' }
-        make_mats = function(new_data = NULL) {
+        make_mat = function(new_data = NULL) {
             # Initialise lists of matrices
             X_list_fe <- list()
             X_list_re <- list()
@@ -138,6 +151,30 @@ SDE <- R6Class(
             return(list(X_fe = X_fe, X_re = X_re, S = S, ncol_re = ncol_re))
         },
         
+        #' Design matrices for grid of covariates
+        #' 
+        #' @param var Name of variable
+        #' @param covs Optional data frame with a single row and one column
+        #' for each covariate, giving the values that should be used. If this is
+        #' not specified, the mean value is used for numeric variables, and the
+        #' first level for factor variables.
+        #' 
+        #' @return A list with the same elements as the output of make_mat, 
+        #' plus a data frame of covariates values.
+        make_mat_grid = function(var, covs = NULL) {
+            # Data frame for covariate grid
+            new_data <- cov_grid(var = var, data = self$data(), covs = covs, 
+                                 formulas = self$formulas())
+            
+            # Create design matrices
+            mats <- self$make_mat(new_data = new_data)
+            
+            # Save data frame of covariate values
+            mats$new_data <- new_data
+            
+            return(mats)
+        },
+        
         #' @description TMB setup
         #'  
         #' This creates an attribute \code{tmb_obj}, which can be used to 
@@ -146,7 +183,7 @@ SDE <- R6Class(
         #' @param silent Logical. If TRUE, all tracing outputs are hidden (default).
         setup = function(silent = TRUE) {
             # Create model matrices
-            mats <- self$make_mats()
+            mats <- self$make_mat()
             X_fe <- mats$X_fe
             X_re <- mats$X_re
             S <- mats$S
@@ -213,10 +250,36 @@ SDE <- R6Class(
             
             # Fit model
             private$fit_ <- do.call(optim, private$tmb_obj_)
-            
             # Get estimates and precision matrix for all parameters
             private$tmb_rep_ <- sdreport(private$tmb_obj_)
+            
+            # Save parameters
             par_list <- as.list(private$tmb_rep_, "Estimate")
+            private$coeff_fe_ <- par_list$coeff_fe
+            private$coeff_re_ <- par_list$coeff_re
+        },
+        
+        #' @description Get parameters from design matrices
+        #' 
+        #' @param X_fe Design matrix for fixed effects, as returned
+        #' by \code{make_mat}
+        #' @param X_re Design matrix for random effects, as returned
+        #' by \code{make_mat}
+        #' 
+        #' @return Matrix with one column for each parameter
+        par_all = function(X_fe, X_re) {
+            # Get linear predictor and put into matrix where each row
+            # corresponds to a time step and each column to a parameter
+            lp <- X_fe %*% self$coeff_fe() + X_re %*% self$coeff_re()
+            lp_mat <- matrix(lp, ncol = length(self$formulas()))
+            
+            # Apply inverse link to get parameters on natural scale
+            par_mat <- matrix(NA, nrow = nrow(lp_mat), ncol = ncol(lp_mat))
+            for(i in 1:ncol(lp_mat)) {
+                par_mat[,i] <- self$invlink()[[i]](lp_mat[,i])
+            }
+            
+            return(par_mat)
         }
     ),
     
@@ -224,6 +287,8 @@ SDE <- R6Class(
         formulas_ = NULL,
         data_ = NULL,
         type_ = NULL,
+        coeff_fe_ = NULL,
+        coeff_re_ = NULL,
         tmb_obj_ = NULL,
         fit_ = NULL,
         tmb_rep_ = NULL
