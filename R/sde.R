@@ -25,7 +25,8 @@ SDE <- R6Class(
             # SDE type code (to pass to C++)
             type_code <- switch (type,
                                  "BM" = 1,
-                                 "OU" = 2)
+                                 "OU" = 2,
+                                 stop("Invalid 'type'"))
             private$type_code_ <- type_code
             
             # Inverse link functions for SDE parameters
@@ -57,18 +58,10 @@ SDE <- R6Class(
         type = function() {return(private$type_)},
         
         #' @description Type of SDE object as integer code
-        type_code = function() {
-            switch (self$type(),
-                    "BM" = 1,
-                    "OU" = 2)
-        },
+        type_code = function() {return(private$type_code_)},
         
         #' @description Inverse link functions
-        invlink = function() {
-            switch (self$type(),
-                    "BM" = list(mu = identity, sigma = exp),
-                    "OU" = list(mu = identity, beta = exp, sigma = exp))
-        },
+        invlink = function() {return(private$invlink_)},
         
         #' @description Fixed effect parameters
         coeff_fe = function() {return(private$coeff_fe_)},
