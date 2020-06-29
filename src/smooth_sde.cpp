@@ -34,8 +34,8 @@ Type objective_function<Type>::operator() ()
     // PARAMETERS //
     //============//
     PARAMETER_VECTOR(coeff_fe); // Fixed effect parameters
-    PARAMETER_VECTOR(coeff_re); // Random effect parameters
     PARAMETER_VECTOR(log_lambda); // Smoothness parameters
+    PARAMETER_VECTOR(coeff_re); // Random effect parameters
     
     // Derived parameters (linear predictors)
     vector<Type> par_vec = X_fe * coeff_fe + X_re * coeff_re;
