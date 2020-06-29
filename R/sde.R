@@ -190,9 +190,10 @@ SDE <- R6Class(
             ncol_re <- mats$ncol_re
             
             # Format initial parameters for TMB
+            # (First fixed effects, then random effects)
             tmb_par <- list(coeff_fe = rep(0, ncol(X_fe)),
-                            coeff_re = 0,
-                            log_lambda = 0)
+                            log_lambda = 0,
+                            coeff_re = 0)
             
             # Setup random effects
             map <- NULL
@@ -251,7 +252,8 @@ SDE <- R6Class(
             # Fit model
             private$fit_ <- do.call(optim, private$tmb_obj_)
             # Get estimates and precision matrix for all parameters
-            private$tmb_rep_ <- sdreport(private$tmb_obj_)
+            private$tmb_rep_ <- sdreport(private$tmb_obj_, getJointPrecision = TRUE, 
+                                         skip.delta.method = FALSE)
             
             # Save parameters
             par_list <- as.list(private$tmb_rep_, "Estimate")
@@ -291,17 +293,36 @@ SDE <- R6Class(
         #' for each covariate, giving the values that should be used. If this is
         #' not specified, the mean value is used for numeric variables, and the
         #' first level for factor variables.
+        #' @param n_post Number of posterior draws to plot. Default: 0.
         #' 
         #' @return A ggplot object
-        plot_par = function(var, covs = NULL) {
+        plot_par = function(var, covs = NULL, n_post = 0) {
             # Create design matrices
             mats <- self$make_mat_grid(var = var, covs = covs)
             par <- self$par_all(X_fe = mats$X_fe, X_re = mats$X_re)
             
-            # Data frame for plot
-            df <- as.data.frame.table(par)
-            colnames(df) <- c("var", "par", "val")
-            df$var <- rep(mats$new_data[, var], nrow(df)/nrow(mats$new_data))
+            # Data frame for posterior draws
+            if(n_post > 0) {
+                post <- my_sde$post(X_fe = mats$X_fe, 
+                                    X_re = mats$X_re, 
+                                    n_post = n_post)
+                post_df <- as.data.frame.table(post)
+                colnames(post_df) <- c("var", "par", "stratum", "val")
+                
+                post_df$mle = "no"
+            } else {
+                post_df <- NULL
+            }
+            
+            # Data frame for MLE
+            mle_df <- as.data.frame.table(par)
+            colnames(mle_df) <- c("var", "par", "val")
+            mle_df$stratum <- "mle"
+            mle_df$mle <- "yes"
+
+            # Full data frame
+            df <- rbind(mle_df, post_df)
+            df$var <- mats$new_data[, var]
             
             # Create caption with values of other (fixed) covariates      
             plot_txt <- NULL
@@ -313,8 +334,10 @@ SDE <- R6Class(
             }
             
             # Create plot
-            p <- ggplot(df, aes(var, val)) + theme_light() +
-                geom_line(size = 0.7) +
+            pal <- c("no" = rgb(0.7, 0, 0, 0.1), "yes" = rgb(0, 0, 0, 1))
+            p <- ggplot(df, aes(var, val, group = stratum, col = mle)) + 
+                theme_light() + geom_line() +
+                scale_colour_manual(values = pal, guide = "none") +
                 facet_wrap(c("par"), scales = "free_y",
                            strip.position = "left",
                            labeller = label_bquote(.(as.character(par)))) +
@@ -324,6 +347,50 @@ SDE <- R6Class(
                       strip.text = element_text(colour = "black"))
             
             return(p)
+        },
+        
+        #' @description Posterior draws for uncertainty quantification
+        #' 
+        #' @param X_fe Design matrix (fixed effects)
+        #' @param X_re Design matrix (random effects)
+        #' @param n_post Number of posterior draws 
+        post = function(X_fe, X_re, n_post = 100) {
+            # Number of parameters
+            n_par <- length(self$formulas())
+            # Number of time steps
+            n <- nrow(X_fe)/n_par
+            
+            # TMB report
+            rep <- self$tmb_rep()
+            
+            # Joint covariance matrix
+            jointCov <- as.matrix(solve(rep$jointPrecision))
+            colnames(jointCov) <- colnames(rep$jointPrecision)
+            
+            # Vector of all parameters
+            par_all <- c(rep$par.fixed, rep$par.random)
+            
+            # Make sure that parameters have the same order in vector of estimates
+            # and in covariance matrix
+            if(!all(names(par_all) == colnames(jointCov)))
+                stop("Check TMB parameter order (should be fixed first, then random)")
+            
+            # Posterior draws from MVN(par_all, jointCov)
+            par_post <- rmvn(n = n_post, mu = par_all, V = jointCov)
+            
+            post_fe <- par_post[, which(colnames(par_post) == "coeff_fe")]
+            post_re <- par_post[, which(colnames(par_post) == "coeff_re")]
+            lp_post <- X_fe %*% t(post_fe) + X_re %*% t(post_re)
+            
+            lp_array <- array(lp_post, dim = c(n, n_par, n_post))
+            
+            par_array <- array(NA, dim = c(n, n_par, n_post))
+            for(i in 1:dim(lp_array)[2]) {
+                par_array[,i,] <- self$invlink()[[i]](lp_array[,i,])
+            }
+            dimnames(par_array)[[2]] <- names(self$invlink())
+            
+            return(par_array)
         }
     ),
     
