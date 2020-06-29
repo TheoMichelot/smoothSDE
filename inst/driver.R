@@ -53,7 +53,7 @@ times <- times_all[ind_obs]
 #################
 ## Setup model ##
 #################
-formulas <- list(mu = ~ s(x1, k = 10, bs = "cs"), sigma = ~1)
+formulas <- list(mu = ~ s(x1, k = 10, bs = "ts"), sigma = ~1)
 data <- data.frame(ID = 1, Z = Z, x1 = x1, time = times)
 type <- "BM"
 my_sde <- SDE$new(formulas = formulas, data = data, type = type)
@@ -62,8 +62,10 @@ my_sde$fit(silent = FALSE)
 mats <- my_sde$make_mat_grid(var = "x1")
 par <- my_sde$par_all(X_fe = mats$X_fe, X_re = mats$X_re)
 
-plot(mats$new_data$x1, par[,1])
+my_sde$plot_par("x1", n_post = 100)
 
 #' TODO:
-#'  - write plot method
-#'  - think about best way to implement link functions
+#'  - link functions
+#'  - count number of parameters
+#'  - specify variable name in data frame
+#'  - allow for several response variables
