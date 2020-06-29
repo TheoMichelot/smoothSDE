@@ -229,14 +229,14 @@ SDE <- R6Class(
             }
             
             # TMB data object
-            tmb_dat <- list(ID = self$data()$ID,
+            tmb_dat <- list(type = self$type_code(),
+                            ID = self$data()$ID,
                             times = self$data()$time,
                             Z = as.matrix(self$data()$Z),
                             X_fe = X_fe,
                             X_re = X_re,
                             S = S,
-                            ncol_re = ncol_re,
-                            type = self$type_code())
+                            ncol_re = ncol_re)
             
             # Create TMB object
             tmb_obj <- MakeADFun(data = tmb_dat, parameters = tmb_par, 
