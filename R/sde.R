@@ -21,6 +21,27 @@ SDE <- R6Class(
             private$formulas_ <- formulas
             private$data_ <- data
             private$type_ <- type
+            
+            # SDE type code (to pass to C++)
+            type_code <- switch (type,
+                                 "BM" = 1,
+                                 "OU" = 2)
+            private$type_code_ <- type_code
+            
+            # Inverse link functions for SDE parameters
+            invlink <- switch (type,
+                               "BM" = list(mu = identity, sigma = exp),
+                               "OU" = list(mu = identity, beta = exp, sigma = exp))
+            private$invlink_ <- invlink
+            
+            # Check that "formulas" is of the right length
+            if(length(formulas) != length(invlink)) {
+                err <- paste0("'formulas' should be a list of length ", 
+                              length(invlink), " for the model ", type,
+                              ", with components ", 
+                              paste(names(invlink), collapse = ", "))
+                stop(err)
+            }
         },
         
         ###############
@@ -366,7 +387,7 @@ SDE <- R6Class(
             colnames(mle_df) <- c("var", "par", "val")
             mle_df$stratum <- "mle"
             mle_df$mle <- "yes"
-
+            
             # Full data frame
             df <- rbind(mle_df, post_df)
             df$var <- mats$new_data[, var]
@@ -409,6 +430,8 @@ SDE <- R6Class(
         formulas_ = NULL,
         data_ = NULL,
         type_ = NULL,
+        type_code_ = NULL,
+        invlink_ = NULL,
         coeff_fe_ = NULL,
         coeff_re_ = NULL,
         tmb_obj_ = NULL,
