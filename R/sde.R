@@ -278,8 +278,52 @@ SDE <- R6Class(
             for(i in 1:ncol(lp_mat)) {
                 par_mat[,i] <- self$invlink()[[i]](lp_mat[,i])
             }
+            colnames(par_mat) <- names(self$invlink())
             
             return(par_mat)
+        },
+        
+        #' @description Plot observation parameters
+        #' 
+        #' @param var Name of covariate as a function of which the parameters
+        #' should be plotted
+        #' @param covs Optional data frame with a single row and one column
+        #' for each covariate, giving the values that should be used. If this is
+        #' not specified, the mean value is used for numeric variables, and the
+        #' first level for factor variables.
+        #' 
+        #' @return A ggplot object
+        plot_par = function(var, covs = NULL) {
+            # Create design matrices
+            mats <- self$make_mat_grid(var = var, covs = covs)
+            par <- self$par_all(X_fe = mats$X_fe, X_re = mats$X_re)
+            
+            # Data frame for plot
+            df <- as.data.frame.table(par)
+            colnames(df) <- c("var", "par", "val")
+            df$var <- rep(mats$new_data[, var], nrow(df)/nrow(mats$new_data))
+            
+            # Create caption with values of other (fixed) covariates      
+            plot_txt <- NULL
+            if(ncol(mats$new_data) > 1) {
+                other_covs <- mats$new_data[1, which(colnames(mats$new_data) != var), 
+                                            drop = FALSE]
+                plot_txt <- paste(colnames(other_covs), "=", round(other_covs, 2), 
+                                  collapse = ", ")
+            }
+            
+            # Create plot
+            p <- ggplot(df, aes(var, val)) + theme_light() +
+                geom_line(size = 0.7) +
+                facet_wrap(c("par"), scales = "free_y",
+                           strip.position = "left",
+                           labeller = label_bquote(.(as.character(par)))) +
+                xlab(var) + ylab(NULL) + ggtitle(plot_txt) +
+                theme(strip.background = element_blank(),
+                      strip.placement = "outside", 
+                      strip.text = element_text(colour = "black"))
+            
+            return(p)
         }
     ),
     
