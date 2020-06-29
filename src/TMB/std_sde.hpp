@@ -16,7 +16,7 @@ Type std_sde(objective_function<Type>* obj) {
     //======//
     // DATA //
     //======//
-    DATA_IVECTOR(type); // Model type for each response variable
+    DATA_STRING(type); // Model type for each response variable
     DATA_VECTOR(ID); // Time series ID
     DATA_VECTOR(times); // Observation times
     DATA_MATRIX(Z); // Response variables
@@ -56,7 +56,7 @@ Type std_sde(objective_function<Type>* obj) {
         // No contribution if first observation of the track
         if(ID(i-1) == ID(i)) {
             llk = llk + tr_dens<Type>(Z(i, 0), Z(i-1, 0), dtimes(i-1), 
-                                      par_mat.row(i-1), true, type(0));
+                                      par_mat.row(i-1), true, type);
         }
     }
     
