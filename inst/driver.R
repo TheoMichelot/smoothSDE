@@ -56,18 +56,14 @@ times <- times_all[ind_obs]
 formulas <- list(mu = ~ s(x1, k = 10, bs = "cs"), sigma = ~1)
 data <- data.frame(ID = 1, Z = Z, x1 = x1, time = times)
 type <- "BM"
-
 my_sde <- SDE$new(formulas = formulas, data = data, type = type)
-
-mats <- my_sde$make_mats()
-
 my_sde$fit(silent = FALSE)
 
+mats <- my_sde$make_mat_grid(var = "x1")
+par <- my_sde$par_all(X_fe = mats$X_fe, X_re = mats$X_re)
 
-my_sde$tmb_obj()$fn(my_sde$tmb_obj()$par)
+plot(mats$new_data$x1, par[,1])
 
 #' TODO:
-#'  - get estimated parameters to check that estimation works
-#'  - write predict method to predict on grid
 #'  - write plot method
 #'  - think about best way to implement link functions
