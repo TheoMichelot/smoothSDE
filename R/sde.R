@@ -340,6 +340,7 @@ SDE <- R6Class(
             # Joint covariance matrix
             jointCov <- as.matrix(solve(rep$jointPrecision))
             colnames(jointCov) <- colnames(rep$jointPrecision)
+            rownames(jointCov) <- colnames(jointCov)
             
             # Vector of all parameters
             par_all <- c(rep$par.fixed, rep$par.random)
