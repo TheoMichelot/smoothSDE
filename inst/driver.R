@@ -64,7 +64,7 @@ formulas <- list(mu = ~ s(x1, k = 10, bs = "cs"),
                  sigma = ~ s(x1, k = 10, bs = "cs"))
 data <- data.frame(ID = 1, Z = Z, x1 = x1, time = times)
 type <- "BM"
-my_sde <- SDE$new(formulas = formulas, data = data, type = type)
+my_sde <- SDE$new(formulas = formulas, data = data, type = type, response = "Z")
 my_sde$fit(silent = FALSE)
 my_sde$plot_par("x1", n_post = 100)
 
