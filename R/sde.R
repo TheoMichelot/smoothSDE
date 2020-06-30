@@ -15,24 +15,28 @@ SDE <- R6Class(
         #' @param data Data frame with covariates, response variable,
         #' time, and ID
         #' @param type Type of SDE ("BM", "OU"...)
+        #' @param response Vector of names of response variables
         #' 
         #' @return A new SDE object
-        initialize = function(formulas, data, type) {
+        initialize = function(formulas, data, type, response) {
             private$formulas_ <- formulas
             private$data_ <- data
             private$type_ <- type
+            private$response_ <- response
             
             # SDE type code (to pass to C++)
             type_code <- switch (type,
                                  "BM" = 1,
                                  "OU" = 2,
+                                 "CTCRW" = 3,
                                  stop("Invalid 'type'"))
             private$type_code_ <- type_code
             
             # Inverse link functions for SDE parameters
             invlink <- switch (type,
                                "BM" = list(mu = identity, sigma = exp),
-                               "OU" = list(mu = identity, beta = exp, sigma = exp))
+                               "OU" = list(mu = identity, beta = exp, sigma = exp),
+                               "CTCRW" = list(beta = exp, sigma = exp))
             private$invlink_ <- invlink
             
             # Check that "formulas" is of the right length
@@ -59,6 +63,9 @@ SDE <- R6Class(
         
         #' @description Type of SDE object as integer code
         type_code = function() {return(private$type_code_)},
+        
+        #' @description Name(s) of response variable(s)
+        response = function() {return(private$response_)},
         
         #' @description Inverse link functions
         invlink = function() {return(private$invlink_)},
@@ -101,6 +108,12 @@ SDE <- R6Class(
             }
             
             return(private$tmb_rep_)
+        },
+        
+        #' @description Data frame of observations (subset response
+        #' variables out of full data frame)
+        obs = function() {
+            self$data()[, self$response(), drop = FALSE]
         },
         
         ###################
@@ -228,15 +241,26 @@ SDE <- R6Class(
                 tmb_par$log_lambda <- rep(0, length(ncol_re))
             }
             
+            # Define initial state and covariance for Kalman filter
+            if(self$type() == "CTCRW") {
+                a0 <- c(self$obs()[1,1], 0, self$obs()[1,2], 0)
+                P0 <- diag(c(1, 10, 1, 10))
+            } else {
+                a0 <- 0
+                P0 <- matrix(0, 1, 1)
+            }
+            
             # TMB data object
             tmb_dat <- list(type = self$type(),
                             ID = self$data()$ID,
                             times = self$data()$time,
-                            obs = as.matrix(self$data()$Z),
+                            obs = as.matrix(self$obs()),
                             X_fe = X_fe,
                             X_re = X_re,
                             S = S,
-                            ncol_re = ncol_re)
+                            ncol_re = ncol_re,
+                            a0 = a0,
+                            P0 = P0)
             
             # Create TMB object
             tmb_obj <- MakeADFun(data = tmb_dat, parameters = tmb_par, 
@@ -424,6 +448,7 @@ SDE <- R6Class(
         data_ = NULL,
         type_ = NULL,
         type_code_ = NULL,
+        response_ = NULL,
         invlink_ = NULL,
         coeff_fe_ = NULL,
         coeff_re_ = NULL,
