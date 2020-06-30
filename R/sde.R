@@ -24,6 +24,9 @@ SDE <- R6Class(
             private$type_ <- type
             private$response_ <- response
             
+            if(any(!response %in% colnames(data)))
+                stop("'response' not found in 'data'")
+            
             # SDE type code (to pass to C++)
             type_code <- switch (type,
                                  "BM" = 1,
