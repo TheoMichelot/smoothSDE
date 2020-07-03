@@ -119,6 +119,35 @@ SDE <- R6Class(
             self$data()[, self$response(), drop = FALSE]
         },
         
+        #' @description Print equation for this model
+        eqn = function() {
+            switch (self$type(),
+                    "BM" = "dZ(t) = mu dt + sigma dW(t)",
+                    "OU" = "dZ(t) = beta (mu - Z(t)) dt + sigma dW(t)",
+                    "CTCRW" = paste0("dV(t) = - beta V(t) dt + sigma dW(t)\n", 
+                                     "dZ(t) = V(t) dt"))
+            
+        },
+        
+        print = function() {
+            cat("#######################\n")
+            cat("### smoothSDE model ###\n")
+            cat("#######################\n\n")
+            
+            # Print SDE
+            eqn <- self$eqn()
+            cat("SDE for", self$type(), "model:\n")
+            cat(eqn, "\n\n")
+            
+            # Print parameter formulas
+            cat("Formulas for model parameters:\n")
+            f <- self$formulas()
+            for(i in 1:length(f)) {
+                cat(names(f)[i], "~", as.character(f[[i]])[2], "\n")
+            }
+            cat("\n")
+        },
+        
         ###################
         ## Other methods ##
         ###################
