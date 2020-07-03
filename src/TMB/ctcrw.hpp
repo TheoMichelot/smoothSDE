@@ -66,7 +66,7 @@ Type ctcrw(objective_function<Type>* obj) {
     DATA_SPARSE_MATRIX(X_re); // Design matrix for random effects
     DATA_SPARSE_MATRIX(S); // Penalty matrix
     DATA_IVECTOR(ncol_re); // Number of columns of S and X_re for each random effect
-    DATA_VECTOR(a0); // Initial state estimate for Kalman filter
+    DATA_MATRIX(a0); // Initial state estimate for Kalman filter
     DATA_MATRIX(P0); // Initial state covariance for Kalman filter
     
     // Number of observations
@@ -121,17 +121,21 @@ Type ctcrw(objective_function<Type>* obj) {
     
     // Initial state mean
     vector<Type> aest(4);
-    aest = a0;
+    aest = a0.row(1);
     // Initial state covariance matrix
     matrix<Type> Pest(4,4);
     Pest = P0;
+    
+    // Counter for ID (to initialise a0)
+    int k = 1;
     
     // Kalman filter iterations
     Type llk = 0;
     for(int i = 1; i < n; i++) {
         if(ID(i) != ID(i-1)) {
             // If first location of track, re-initialise state vector
-            aest = a0;
+            aest = a0.row(k);
+            k = k + 1;
             Pest = P0;
         } else {
             // Compute Kalman filter matrices

@@ -246,6 +246,9 @@ SDE <- R6Class(
         #' 
         #' @param silent Logical. If TRUE, all tracing outputs are hidden (default).
         setup = function(silent = TRUE) {
+            # Number of time steps
+            n <- nrow(self$data())
+            
             # Create model matrices
             mats <- self$make_mat()
             X_fe <- mats$X_fe
@@ -280,7 +283,11 @@ SDE <- R6Class(
             
             # Define initial state and covariance for Kalman filter
             if(self$type() == "CTCRW") {
-                a0 <- c(self$obs()[1,1], 0, self$obs()[1,2], 0)
+                # First index for each ID
+                i0 <- c(1, which(self$data()$ID[-n] != self$data()$ID[-1]) + 1)
+                # Initial state = (x1, 0, y1, 0)
+                a0 <- cbind(self$obs()[i0, 1], 0, self$obs()[i0,2], 0)
+                # Initial state covariance
                 P0 <- diag(c(1, 10, 1, 10))
             } else {
                 a0 <- 0
