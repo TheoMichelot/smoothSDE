@@ -319,6 +319,9 @@ SDE <- R6Class(
                 self$setup(silent = silent)
             }
             
+            # Print model formulation
+            self$print()
+            
             # Fit model
             private$fit_ <- do.call(optim, private$tmb_obj_)
             # Get estimates and precision matrix for all parameters
