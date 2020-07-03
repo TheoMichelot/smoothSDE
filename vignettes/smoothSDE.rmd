@@ -1,0 +1,104 @@
+---
+title: "smoothSDE vignette"
+author: "Théo Michelot"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_document
+vignette: >
+  %\VignetteIndexEntry{smoothSDE vignette}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  message = FALSE, error = FALSE, warning = FALSE,
+  comment = NA
+)
+```
+
+```{r load-package, echo = FALSE}
+library(smoothSDE)
+set.seed(342)
+```
+
+# SDE specification
+
+The package is centred around the R6 class SDE, which encapsulates a varying-coefficient stochastic differential equation model, including formulas for the time-varying parameters. It takes four arguments to create an SDE object: 
+
+ - formulas: List of formulas for the parameters of the SDE. The formulas can include terms from standard R expressions, as well as smooth terms from the mgcv package.
+
+ - data: Data frame with columns for the response variable, for the covariate, for ID, and for time.
+
+ - response: Name of response variable.
+
+ - type: Type of SDE; options are "BM" (Brownian motion), "OU" (Ornstein-Uhlenbeck), "CTCRW" (continuous-time correlated random walk).
+
+# Example
+
+The following code can be used to fit the varying-coefficient CTCRW model to elephant GPS data from Wall et al. (2014). Elliptical time‐density model to estimate wildlife utilization distributions. Methods in Ecology and Evolution, 5(8), 780-790.
+
+```{r example}
+##################
+## Prepare data ##
+##################
+# Load data and keep relevant columns
+URL <- paste0("https://www.datarepository.movebank.org/bitstream/handle/",
+              "10255/move.373/Elliptical%20Time-Density%20Model%20%28Wall%",
+              "20et%20al.%202014%29%20African%20Elephant%20Dataset%20%",
+              "28Source-Save%20the%20Elephants%29.csv")
+raw <- read.csv(url(URL))
+keep_cols <- c(11, 13, 14, 17, 4, 5, 6)
+raw_cols <- raw[, keep_cols]
+colnames(raw_cols) <- c("ID", "x", "y", "date", "lon", "lat", "temp")
+
+# Only keep six months to eliminate seasonal effects
+track <- subset(raw_cols, ID == unique(ID)[1])
+dates <- as.POSIXlt(track$date, tz = "GMT")
+times <- as.numeric(dates - min(dates))/3600
+keep_rows <- which(dates > as.POSIXct("2009-05-01 00:00:00") & 
+                       dates < as.POSIXct("2009-09-30 23:59:59"))
+track <- track[keep_rows,]
+dates <- dates[keep_rows]
+times <- times[keep_rows]
+
+# Convert to km
+track$x <- track$x/1000
+track$y <- track$y/1000
+
+###############
+## Fit model ##
+###############
+# Data set including ID, time, responses (x, y), and covariate (temp)
+data <- data.frame(ID = 1, x = track$x, y = track$y, 
+                   temp = track$temp, time = times)
+
+# Model formulas for CTCRW parameters
+formulas <- list(beta = ~ s(temp, k = 10, bs = "cs"), 
+                 sigma = ~ s(temp, k = 10, bs = "cs"))
+
+# Type of SDE model: continuous-time correlated random walk
+type <- "CTCRW"
+
+# Create SDE model object
+my_sde <- SDE$new(formulas = formulas, data = data, type = type, 
+                  response = c("x", "y"))
+
+# Fit model
+my_sde$fit()
+
+# Plot results (parameters as functions of covariate)
+my_sde$plot_par("temp", n_post = 100)
+```
+
+# To-do list
+
+ - Implement elephant seal body condition SSM
+    
+ - Simplify structure of C++ code (only one objective function)
+    
+ - Define one a0 for each ID in CTCRW model
+    
+ - Allow for non-zero mean velocity in CTCRW model
+ 
