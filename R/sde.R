@@ -42,11 +42,15 @@ SDE <- R6Class(
                                "CTCRW" = list(beta = exp, sigma = exp))
             private$invlink_ <- invlink
             
-            # Check that "formulas" is of the right length
+            # Check that "formulas" is of the right length and with right names
             if(length(formulas) != length(invlink)) {
                 err <- paste0("'formulas' should be a list of length ", 
                               length(invlink), " for the model ", type,
                               ", with components ", 
+                              paste(names(invlink), collapse = ", "))
+                stop(err)
+            } else if(names(formulas) != names(invlink)) {
+                err <- paste0("'formulas' should be a list with components ", 
                               paste(names(invlink), collapse = ", "))
                 stop(err)
             }
@@ -129,6 +133,10 @@ SDE <- R6Class(
             
         },
         
+        ###################
+        ## Other methods ##
+        ###################
+        #' @description Print SDE and parameter formulas
         print = function() {
             cat("#######################\n")
             cat("### smoothSDE model ###\n")
@@ -148,9 +156,6 @@ SDE <- R6Class(
             cat("\n")
         },
         
-        ###################
-        ## Other methods ##
-        ###################
         #' @description Create model matrices
         #'
         #' @param new_data Optional new data set, including covariates for which
