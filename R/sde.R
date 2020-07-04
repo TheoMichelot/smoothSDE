@@ -304,7 +304,7 @@ SDE <- R6Class(
                 # Initial state covariance
                 P0 <- diag(c(1, 10, 1, 10))
             } else {
-                a0 <- 0
+                a0 <- matrix(0, 1, 1)
                 P0 <- matrix(0, 1, 1)
             }
             
