@@ -49,7 +49,7 @@ SDE <- R6Class(
                               ", with components ", 
                               paste(names(invlink), collapse = ", "))
                 stop(err)
-            } else if(names(formulas) != names(invlink)) {
+            } else if(any(names(formulas) != names(invlink))) {
                 err <- paste0("'formulas' should be a list with components ", 
                               paste(names(invlink), collapse = ", "))
                 stop(err)
@@ -436,7 +436,7 @@ SDE <- R6Class(
             
             # Data frame for posterior draws
             if(n_post > 0) {
-                post <- my_sde$post(X_fe = mats$X_fe, 
+                post <- self$post(X_fe = mats$X_fe, 
                                     X_re = mats$X_re, 
                                     n_post = n_post)
                 post_df <- as.data.frame.table(post)
