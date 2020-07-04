@@ -94,7 +94,7 @@ Type nllk_ctcrw(vector<Type> ID, vector<Type> dtimes,
     
     // Initial state mean
     vector<Type> aest(4);
-    aest = a0.row(1);
+    aest = a0.row(0);
     // Initial state covariance matrix
     matrix<Type> Pest(4,4);
     Pest = P0;
