@@ -151,21 +151,21 @@ SDE <- R6Class(
         ## Other methods ##
         ###################
         #' @description Print SDE and parameter formulas
-        print = function() {
-            cat("#######################\n")
-            cat("### smoothSDE model ###\n")
-            cat("#######################\n\n")
+        message = function() {
+            message("#######################")
+            message("### smoothSDE model ###")
+            message("#######################")
             
             # Print SDE
             eqn <- self$eqn()
-            cat("SDE for", self$type(), "model:\n")
-            cat(eqn, "\n\n")
+            message("SDE for ", self$type(), " model:")
+            message(eqn, "\n")
             
             # Print parameter formulas
-            cat("Formulas for model parameters:\n")
+            message("Formulas for model parameters:")
             f <- self$formulas()
             for(i in 1:length(f)) {
-                cat(names(f)[i], "~", as.character(f[[i]])[2], "\n")
+                message(names(f)[i], " ~ ", as.character(f[[i]])[2])
             }
             cat("\n")
         },
@@ -346,7 +346,7 @@ SDE <- R6Class(
             }
             
             # Print model formulation
-            self$print()
+            self$message()
             
             # Fit model
             private$fit_ <- do.call(optim, private$tmb_obj_)
