@@ -54,6 +54,20 @@ SDE <- R6Class(
                               paste(names(invlink), collapse = ", "))
                 stop(err)
             }
+            
+            # Check that data has an "ID" column, and that it's a factor
+            if(!any(colnames(data) == "ID")) {
+                warning(paste("No ID column found in 'data',",
+                              "assuming same ID for all observations"))
+                data$ID <- factor(1)
+            } else {
+                data$ID <- factor(data$ID)
+            }
+            
+            # Check that data has a "time" column
+            if(!any(colnames(data) == "time")) {
+                stop("'data' should have a time column")
+            }
         },
         
         ###############
@@ -437,8 +451,8 @@ SDE <- R6Class(
             # Data frame for posterior draws
             if(n_post > 0) {
                 post <- self$post(X_fe = mats$X_fe, 
-                                    X_re = mats$X_re, 
-                                    n_post = n_post)
+                                  X_re = mats$X_re, 
+                                  n_post = n_post)
                 post_df <- as.data.frame.table(post)
                 colnames(post_df) <- c("var", "par", "stratum", "val")
                 
