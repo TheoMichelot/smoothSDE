@@ -102,3 +102,7 @@ my_sde$plot_par("temp", n_post = 100)
     
  - Allow for non-zero mean velocity in CTCRW model
  
+ - Residuals
+ 
+ - AIC
+ 
