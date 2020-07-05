@@ -95,14 +95,13 @@ my_sde$plot_par("temp", n_post = 100)
 # To-do list
 
  - Implement elephant seal body condition SSM
-    
- - Simplify structure of C++ code (only one objective function)
-    
- - Define one a0 for each ID in CTCRW model
-    
+
  - Allow for non-zero mean velocity in CTCRW model
  
  - Residuals
  
  - AIC
  
+ - Let users select initial parameter values. Only for intercept? How to make this as easy as possible?
+ 
+ - Allow for fixed parameters (e.g. zero-mean OU, zero-drift BM...)
