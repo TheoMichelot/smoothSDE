@@ -101,5 +101,5 @@ my_sde$plot_par("temp", n_post = 100)
  - Residuals
  
  - AIC
- 
- - Let users select initial parameter values. Only for intercept? How to make this as easy as possible?
+
+ - Possible improvement to make it easier to set fixpar and par0 (and more?): save ncol_fe somewhere in the object. Or save a vector of length ncol(X_fe), where the value of each entry indicates which SDE parameter it corresponds to. For example, c(1, 1, 2, 3) if the first two columns of X_fe are for the first SDE parameter, the third column is for the second parameter, and the fourth column is for the third parameter.
