@@ -19,7 +19,8 @@ SDE <- R6Class(
         #' @param fixpar Vector of names of fixed SDE parameters
         #' 
         #' @return A new SDE object
-        initialize = function(formulas, data, type, response, fixpar = NULL) {
+        initialize = function(formulas, data, type, response, 
+                              par0 = NULL, fixpar = NULL) {
             private$formulas_ <- formulas
             private$data_ <- data
             private$type_ <- type
@@ -28,6 +29,13 @@ SDE <- R6Class(
             
             if(any(!response %in% colnames(data)))
                 stop("'response' not found in 'data'")
+            
+            # Link functions for SDE parameters
+            link <- switch (type,
+                               "BM" = list(mu = identity, sigma = log),
+                               "OU" = list(mu = identity, beta = log, sigma = log),
+                               "CTCRW" = list(beta = log, sigma = log))
+            private$link_ <- link
             
             # Inverse link functions for SDE parameters
             invlink <- switch (type,
@@ -62,6 +70,33 @@ SDE <- R6Class(
             if(!any(colnames(data) == "time")) {
                 stop("'data' should have a time column")
             }
+
+            # Initial parameters (zero if par0 not provided)
+            mats <- self$make_mat()
+            ncol_fe <- mats$ncol_fe
+            ncol_re <- mats$ncol_re
+            private$coeff_fe_ <- rep(0, sum(ncol_fe))
+            private$coeff_re_ <- rep(0, sum(ncol_re))
+            
+            # Set initial fixed coefficients if provided (par0)
+            if(!is.null(par0)) {
+                # Number of SDE parameters
+                n_par <- length(self$formulas())
+
+                if(length(par0) != n_par) {
+                    stop("'par0' should be of length ", n_par,
+                         " with one entry for each SDE parameter (",
+                         paste0(names(self$formulas()), collapse = ", "), ")")
+                }
+                                
+                # First column of each X_fe for each SDE parameter
+                i0 <- c(1, cumsum(ncol_fe)[-n_par] + 1)
+                
+                # Apply link to get parameters on working scale
+                private$coeff_fe_[i0] <- sapply(1:n_par, function(i) {
+                    self$link()[[i]](par0[i])
+                })
+            }
         },
         
         ###############
@@ -81,6 +116,9 @@ SDE <- R6Class(
         
         #' @description Name(s) of fixed parameter(s)
         fixpar = function() {return(private$fixpar_)},
+        
+        #' @description Link functions
+        link = function() {return(private$link_)},
         
         #' @description Inverse link functions
         invlink = function() {return(private$invlink_)},
@@ -299,7 +337,7 @@ SDE <- R6Class(
             
             # Format initial parameters for TMB
             # (First fixed effects, then random effects)
-            tmb_par <- list(coeff_fe = rep(0, ncol(X_fe)),
+            tmb_par <- list(coeff_fe = self$coeff_fe(),
                             log_lambda = 0,
                             coeff_re = 0)
             
@@ -318,7 +356,7 @@ SDE <- R6Class(
                 # If there are random effects, 
                 # set initial values for coeff_re and log_lambda
                 random <- c(random, "coeff_re")
-                tmb_par$coeff_re <- rep(0, ncol(S))
+                tmb_par$coeff_re <- self$coeff_re()
                 tmb_par$log_lambda <- rep(0, length(ncol_re))
             }
             
@@ -558,6 +596,7 @@ SDE <- R6Class(
         type_ = NULL,
         response_ = NULL,
         fixpar_ = NULL,
+        link_ = NULL,
         invlink_ = NULL,
         coeff_fe_ = NULL,
         coeff_re_ = NULL,
