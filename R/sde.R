@@ -29,14 +29,6 @@ SDE <- R6Class(
             if(any(!response %in% colnames(data)))
                 stop("'response' not found in 'data'")
             
-            # SDE type code (to pass to C++)
-            type_code <- switch (type,
-                                 "BM" = 1,
-                                 "OU" = 2,
-                                 "CTCRW" = 3,
-                                 stop("Invalid 'type'"))
-            private$type_code_ <- type_code
-            
             # Inverse link functions for SDE parameters
             invlink <- switch (type,
                                "BM" = list(mu = identity, sigma = exp),
@@ -83,9 +75,6 @@ SDE <- R6Class(
         
         #' @description Type of SDE object
         type = function() {return(private$type_)},
-        
-        #' @description Type of SDE object as integer code
-        type_code = function() {return(private$type_code_)},
         
         #' @description Name(s) of response variable(s)
         response = function() {return(private$response_)},
@@ -567,7 +556,6 @@ SDE <- R6Class(
         formulas_ = NULL,
         data_ = NULL,
         type_ = NULL,
-        type_code_ = NULL,
         response_ = NULL,
         fixpar_ = NULL,
         invlink_ = NULL,
