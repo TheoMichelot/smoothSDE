@@ -175,6 +175,32 @@ SDE <- R6Class(
             cat("\n")
         },
         
+        #' @description Indices of fixed coefficients in coff_fe
+        ind_fixcoeff = function() {
+            # Number of SDE parameters
+            n_par <- length(self$formulas())
+            
+            # Number of columns of X_fe for each SDE parameter
+            ncol_fe <- self$make_mat()$ncol_fe
+            
+            # Counter for coefficients in coeff_fe
+            k <- 1
+            # Initialise vector of indices of fixed coefficients
+            ind_fixcoeff <- NULL
+            # Loop over SDE parameters
+            for(par in 1:n_par) {
+                # If this parameter is fixed, add corresponding indices
+                # to ind_fixcoeff
+                if(names(self$formulas())[par] %in% self$fixpar()) {
+                    ind_thispar <- k:(k + ncol_fe[par] - 1)
+                    ind_fixcoeff <- c(ind_fixcoeff, ind_thispar)
+                }
+                k <- k + ncol_fe[par]
+            }
+            
+            return(ind_fixcoeff)
+        },
+        
         #' @description Create model matrices
         #'
         #' @param new_data Optional new data set, including covariates for which
@@ -309,23 +335,8 @@ SDE <- R6Class(
             
             # Setup fixed parameters
             if(!is.null(self$fixpar())) {
-                # Number of SDE parameters
-                n_par <- length(self$formulas())
-                
-                # Counter for coefficients in coeff_fe
-                k <- 1
-                # Initialise vector of indices of fixed coefficients
-                ind_fixcoeff <- NULL
-                # Loop over SDE parameters
-                for(par in 1:n_par) {
-                    # If this parameter is fixed, add corresponding indices
-                    # to ind_fixcoeff
-                    if(names(self$formulas())[par] %in% self$fixpar()) {
-                        ind_thispar <- k:(k + ncol_fe[par] - 1)
-                        ind_fixcoeff <- c(ind_fixcoeff, ind_thispar)
-                    }
-                    k <- k + ncol_fe[par]
-                }
+                # Indices of fixed coefficients in coeff_fe
+                ind_fixcoeff <- self$ind_fixcoeff()
                 
                 # Define vector with a different integer for each coefficient
                 # to be estimated, and NA for each fixed coefficient
@@ -431,10 +442,12 @@ SDE <- R6Class(
         #' @param X_re Design matrix (random effects)
         #' @param n_post Number of posterior draws 
         post = function(X_fe, X_re, n_post = 100) {
-            # Number of parameters
+            # Number of SDE parameters
             n_par <- length(self$formulas())
             # Number of time steps
             n <- nrow(X_fe)/n_par
+            # Indices of non-fixed SDE parameters
+            ind_estpar <- which(!names(self$formulas()) %in% self$fixpar())
             
             # TMB report
             rep <- self$tmb_rep()
@@ -455,7 +468,11 @@ SDE <- R6Class(
             # Posterior draws from MVN(par_all, jointCov)
             par_post <- rmvn(n = n_post, mu = par_all, V = jointCov)
             
-            post_fe <- par_post[, which(colnames(par_post) == "coeff_fe")]
+            # In post_fe, set columns for fixed parameters to fixed value,
+            # and use posterior draws for non-fixed parameters
+            post_fe <- matrix(rep(self$coeff_fe(), each = n_post), 
+                              nrow = n_post, ncol = n_par)
+            post_fe[,ind_estpar] <- par_post[, which(colnames(par_post) == "coeff_fe")]
             post_re <- par_post[, which(colnames(par_post) == "coeff_re")]
             lp_post <- X_fe %*% t(post_fe) + X_re %*% t(post_re)
             
