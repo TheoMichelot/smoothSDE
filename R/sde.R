@@ -16,13 +16,15 @@ SDE <- R6Class(
         #' time, and ID
         #' @param type Type of SDE ("BM", "OU"...)
         #' @param response Vector of names of response variables
+        #' @param fixpar Vector of names of fixed SDE parameters
         #' 
         #' @return A new SDE object
-        initialize = function(formulas, data, type, response) {
+        initialize = function(formulas, data, type, response, fixpar = NULL) {
             private$formulas_ <- formulas
             private$data_ <- data
             private$type_ <- type
             private$response_ <- response
+            private$fixpar_ <- fixpar
             
             if(any(!response %in% colnames(data)))
                 stop("'response' not found in 'data'")
@@ -87,6 +89,9 @@ SDE <- R6Class(
         
         #' @description Name(s) of response variable(s)
         response = function() {return(private$response_)},
+        
+        #' @description Name(s) of fixed parameter(s)
+        fixpar = function() {return(private$fixpar_)},
         
         #' @description Inverse link functions
         invlink = function() {return(private$invlink_)},
@@ -180,6 +185,7 @@ SDE <- R6Class(
         #'   \item X_fe Design matrix for fixed effects
         #'   \item X_re Design matrix for random effects
         #'   \item S Smoothness matrix
+        #'   \item ncol_fe Number of columns for X_fe for each parameter
         #'   \item ncol_re Number of columns of X_re and S for each random effect
         #' }
         make_mat = function(new_data = NULL) {
@@ -187,6 +193,7 @@ SDE <- R6Class(
             X_list_fe <- list()
             X_list_re <- list()
             S_list <- list()
+            ncol_fe <- NULL
             ncol_re <- NULL
             k <- 1
             
@@ -214,6 +221,9 @@ SDE <- R6Class(
                 # Smoothing matrix
                 S_list[[k]] <- bdiag_check(gam_setup$S)
                 
+                # Number of columns for fixed effects
+                ncol_fe <- c(ncol_fe, gam_setup$nsdf)
+                
                 # Number of columns for each random effect
                 if(length(gam_setup$S) > 0)
                     ncol_re <- c(ncol_re, sapply(gam_setup$S, ncol))
@@ -226,7 +236,8 @@ SDE <- R6Class(
             X_re <- bdiag_check(X_list_re)
             S <- bdiag_check(S_list)
             
-            return(list(X_fe = X_fe, X_re = X_re, S = S, ncol_re = ncol_re))
+            return(list(X_fe = X_fe, X_re = X_re, S = S, 
+                        ncol_fe = ncol_fe, ncol_re = ncol_re))
         },
         
         #' Design matrices for grid of covariates
@@ -268,6 +279,7 @@ SDE <- R6Class(
             X_fe <- mats$X_fe
             X_re <- mats$X_re
             S <- mats$S
+            ncol_fe <- mats$ncol_fe
             ncol_re <- mats$ncol_re
             
             # Format initial parameters for TMB
@@ -293,6 +305,35 @@ SDE <- R6Class(
                 random <- c(random, "coeff_re")
                 tmb_par$coeff_re <- rep(0, ncol(S))
                 tmb_par$log_lambda <- rep(0, length(ncol_re))
+            }
+            
+            # Setup fixed parameters
+            if(!is.null(self$fixpar())) {
+                # Number of SDE parameters
+                n_par <- length(self$formulas())
+                
+                # Counter for coefficients in coeff_fe
+                k <- 1
+                # Initialise vector of indices of fixed coefficients
+                ind_fixcoeff <- NULL
+                # Loop over SDE parameters
+                for(par in 1:n_par) {
+                    # If this parameter is fixed, add corresponding indices
+                    # to ind_fixcoeff
+                    if(names(self$formulas())[par] %in% self$fixpar()) {
+                        ind_thispar <- k:(k + ncol_fe[par] - 1)
+                        ind_fixcoeff <- c(ind_fixcoeff, ind_thispar)
+                    }
+                    k <- k + ncol_fe[par]
+                }
+                
+                # Define vector with a different integer for each coefficient
+                # to be estimated, and NA for each fixed coefficient
+                coeff_fe_map <- 1:ncol(X_fe)
+                coeff_fe_map[ind_fixcoeff] <- NA
+                
+                # Update map (to be passed to TMB)
+                map <- c(map, list(coeff_fe = factor(coeff_fe_map)))
             }
             
             # Define initial state and covariance for Kalman filter
@@ -511,6 +552,7 @@ SDE <- R6Class(
         type_ = NULL,
         type_code_ = NULL,
         response_ = NULL,
+        fixpar_ = NULL,
         invlink_ = NULL,
         coeff_fe_ = NULL,
         coeff_re_ = NULL,
