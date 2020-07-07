@@ -32,9 +32,9 @@ SDE <- R6Class(
             
             # Link functions for SDE parameters
             link <- switch (type,
-                               "BM" = list(mu = identity, sigma = log),
-                               "OU" = list(mu = identity, beta = log, sigma = log),
-                               "CTCRW" = list(beta = log, sigma = log))
+                            "BM" = list(mu = identity, sigma = log),
+                            "OU" = list(mu = identity, beta = log, sigma = log),
+                            "CTCRW" = list(beta = log, sigma = log))
             private$link_ <- link
             
             # Inverse link functions for SDE parameters
@@ -70,7 +70,7 @@ SDE <- R6Class(
             if(!any(colnames(data) == "time")) {
                 stop("'data' should have a time column")
             }
-
+            
             # Initial parameters (zero if par0 not provided)
             mats <- self$make_mat()
             ncol_fe <- mats$ncol_fe
@@ -82,13 +82,13 @@ SDE <- R6Class(
             if(!is.null(par0)) {
                 # Number of SDE parameters
                 n_par <- length(self$formulas())
-
+                
                 if(length(par0) != n_par) {
                     stop("'par0' should be of length ", n_par,
                          " with one entry for each SDE parameter (",
                          paste0(names(self$formulas()), collapse = ", "), ")")
                 }
-                                
+                
                 # First column of each X_fe for each SDE parameter
                 i0 <- c(1, cumsum(ncol_fe)[-n_par] + 1)
                 
@@ -512,6 +512,45 @@ SDE <- R6Class(
             dimnames(par_array)[[2]] <- names(self$invlink())
             
             return(par_array)
+        },
+        
+        #' @description Model residuals
+        residuals = function() {
+            data <- self$data()
+            n <- nrow(data)
+            
+            # Get start and end indices of tracks
+            break_ind <- which(data$ID[-1] != data$ID[-n])
+            start_ind <- c(1, break_ind + 1)
+            end_ind <- c(break_ind, n)
+            
+            # Time intervals
+            dtimes <- data$time[-start_ind] - data$time[-end_ind]
+            
+            # Get SDE parameters for each time step
+            mats <- self$make_mat()
+            par <- self$par_all(X_fe = mats$X_fe, X_re = mats$X_re)
+            
+            # Response variable
+            Z <- data[[self$response()]]
+            
+            # Compute mean and sd of normal transition density
+            if(self$type() == "BM") {
+                mean <- Z[-end_ind] + par[-end_ind, "mu"] * dtimes
+                sd <- par[-end_ind, "sigma"] * sqrt(dtimes)
+            } else if(self$type() == "OU") {
+                mu <- par[-end_ind, "mu"]
+                beta <- par[-end_ind, "beta"]
+                sigma <- par[-end_ind, "sigma"]
+                mean <-  mu + exp(- beta * dtimes) * (Z[-end_ind] - mu)
+                sd <- sigma/sqrt(2 * beta) * sqrt(1 - exp(-2 * beta * dtimes))
+            } else {
+                stop(paste("Residuals not implemented for model", self$type()))
+            }
+            
+            # Residuals ~ N(0, 1) under assumptions of model and discretization
+            res <- (Z[-start_ind] - mean) / sd
+            return(res)
         },
         
         ######################
