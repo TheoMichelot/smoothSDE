@@ -197,7 +197,12 @@ SDE <- R6Class(
             message("Formulas for model parameters:")
             f <- self$formulas()
             for(i in 1:length(f)) {
-                message(names(f)[i], " ~ ", as.character(f[[i]])[2])
+                if(names(f)[i] %in% self$fixpar()) {
+                    this_form <- "fixed"
+                } else {
+                    this_form <- as.character(f[[i]])[2]
+                }
+                message(names(f)[i], " ~ ", this_form)
             }
             cat("\n")
         },
