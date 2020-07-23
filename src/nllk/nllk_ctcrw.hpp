@@ -1,6 +1,9 @@
 #ifndef _CTCRW_
 #define _CTCRW_
 
+#undef TMB_OBJECTIVE_PTR
+#define TMB_OBJECTIVE_PTR obj
+
 using namespace R_inla; 
 using namespace density; 
 using namespace Eigen; 
@@ -49,30 +52,57 @@ matrix<Type> makeQ(Type beta, Type sigma, Type dt) {
     return Q;
 }
 
-//' Negative log-likelihood for CTCRW
+//' Penalised negative log-likelihood for CTCRW
 //' 
 //' This function was inspired by the source code of the package
 //' crawl, authored by Devin Johnson and Josh London
-//' 
-//' @param ID Vector of time series IDs
-//' @param dtimes Vector of time intervals
-//' @param obs Matrix of observations (two columns: x and y)
-//' @param a0 Matrix of initial state vectors for Kalman filter
-//' @param P0 Initial state covariance matrix for Kalman filter
-//' @param par_mat Matrix of parameters (two columns: beta and sigma)
-//' 
-//' @return Negative log-likelihood (unpenalized)
 template <class Type>
-Type nllk_ctcrw(vector<Type> ID, vector<Type> dtimes, 
-                matrix<Type> obs, matrix<Type> a0,
-                matrix<Type> P0, matrix<Type> par_mat) {
+Type nllk_ctcrw(objective_function<Type>* obj) {
+    //======//
+    // DATA //
+    //======//
+    DATA_VECTOR(ID); // Time series ID
+    DATA_VECTOR(times); // Observation times
+    DATA_MATRIX(obs); // Response variables
+    DATA_SPARSE_MATRIX(X_fe); // Design matrix for fixed effects
+    DATA_SPARSE_MATRIX(X_re); // Design matrix for random effects
+    DATA_SPARSE_MATRIX(S); // Penalty matrix
+    DATA_IVECTOR(ncol_re); // Number of columns of S and X_re for each random effect
+    DATA_MATRIX(a0); // Initial state estimate for Kalman filter
+    DATA_MATRIX(P0); // Initial state covariance for Kalman filter
+    
     // Number of observations
     int n = obs.rows();
+    
+    // Time intervals (needs to be of length n)
+    vector<Type> dtimes(n);
+    for(int i = 0; i < n-1; i++)
+        dtimes(i) = times(i+1) - times(i);
+    dtimes(n-1) = 1;
+    
+    //============//
+    // PARAMETERS //
+    //============//
+    PARAMETER_VECTOR(coeff_fe); // Fixed effect parameters
+    PARAMETER_VECTOR(log_lambda); // Smoothness parameters
+    PARAMETER_VECTOR(coeff_re); // Random effect parameters
+    
+    // Derived parameters (linear predictors)
+    vector<Type> par_vec = X_fe * coeff_fe + X_re * coeff_re;
+    matrix<Type> par_mat(n, par_vec.size()/n);
+    for(int i = 0; i < par_mat.cols(); i++) {
+        // Matrix with one row for each time step and
+        // one column for each parameter
+        par_mat.col(i) = par_vec.segment(i*n, n);
+    }
     
     // Parameters of velocity process
     vector<Type> beta = exp(par_mat.col(0).array());
     vector<Type> sigma = exp(par_mat.col(1).array());
     
+    //================================//
+    // Likelihood using Kalman filter //
+    //================================//
     // Define all matrices and vectors needed below
     matrix<Type> Z(2, 4);
     Z.setZero();
@@ -148,7 +178,41 @@ Type nllk_ctcrw(vector<Type> ID, vector<Type> dtimes,
         }
     }
     
-    return -llk;
+    //===================//
+    // Smoothing penalty //
+    // ===================//
+    Type nllk = -llk;
+    // Are there random effects?
+    if(ncol_re(0) > 0) {
+        // Index in matrix S
+        int S_start = 0;
+        
+        // Loop over smooths
+        for(int i = 0; i < ncol_re.size(); i++) {
+            // Size of penalty matrix for this smooth
+            int Sn = ncol_re(i);
+            
+            // Penalty matrix for this smooth
+            Eigen::SparseMatrix<Type> this_S = S.block(S_start, S_start, Sn, Sn);
+            
+            // Coefficients for this smooth
+            vector<Type> this_coeff_re = coeff_re.segment(S_start, Sn);
+            
+            // Add penalty
+            nllk = nllk -
+                Type(0.5) * Sn * log_lambda(i) +
+                Type(0.5) * exp(log_lambda(i)) * 
+                density::GMRF(this_S).Quadform(this_coeff_re);
+            
+            // Increase index
+            S_start = S_start + Sn;
+        }
+    }
+    
+    return nllk;
 }
+
+#undef TMB_OBJECTIVE_PTR
+#define TMB_OBJECTIVE_PTR this
 
 #endif
