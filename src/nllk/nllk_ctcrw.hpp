@@ -13,7 +13,7 @@ using namespace Eigen;
 //' @param beta Parameter beta of OU velocity process
 //' @param dt Length of time interval
 template<class Type>
-matrix<Type> makeT(Type beta, Type dt) {
+matrix<Type> makeT_ctcrw(Type beta, Type dt) {
     matrix<Type> T(4,4);
     T.setZero();
     
@@ -33,7 +33,7 @@ matrix<Type> makeT(Type beta, Type dt) {
 //' @param sigma Parameter sigma of OU velocity process
 //' @param dt Length of time interval
 template<class Type>
-matrix<Type> makeQ(Type beta, Type sigma, Type dt) {
+matrix<Type> makeQ_ctcrw(Type beta, Type sigma, Type dt) {
     matrix<Type> Q(4,4);
     Q.setZero();
     
@@ -142,8 +142,8 @@ Type nllk_ctcrw(objective_function<Type>* obj) {
             Pest = P0;
         } else {
             // Compute Kalman filter matrices
-            matrix<Type> T = makeT(beta(i), dtimes(i));
-            matrix<Type> Q = makeQ(beta(i), sigma(i), dtimes(i));
+            matrix<Type> T = makeT_ctcrw(beta(i), dtimes(i));
+            matrix<Type> Q = makeQ_ctcrw(beta(i), sigma(i), dtimes(i));
             
             if(R_IsNA(asDouble(obs(i,0)))) {
                 // If missing observation
