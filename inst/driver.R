@@ -67,9 +67,3 @@ type <- "BM"
 my_sde <- SDE$new(formulas = formulas, data = data, type = type, response = "Z")
 my_sde$fit(silent = FALSE)
 my_sde$plot_par("x1", n_post = 100)
-
-#' TODO:
-#'  - link functions
-#'  - count number of parameters
-#'  - specify variable name in data frame
-#'  - allow for several response variables
