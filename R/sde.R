@@ -34,14 +34,16 @@ SDE <- R6Class(
             link <- switch (type,
                             "BM" = list(mu = identity, sigma = log),
                             "OU" = list(mu = identity, beta = log, sigma = log),
-                            "CTCRW" = list(beta = log, sigma = log))
+                            "CTCRW" = list(beta = log, sigma = log),
+                            "ESEAL_SSM" = list(mu = identity, sigma = log))
             private$link_ <- link
             
             # Inverse link functions for SDE parameters
             invlink <- switch (type,
                                "BM" = list(mu = identity, sigma = exp),
                                "OU" = list(mu = identity, beta = exp, sigma = exp),
-                               "CTCRW" = list(beta = exp, sigma = exp))
+                               "CTCRW" = list(beta = exp, sigma = exp),
+                               "ESEAL_SSM" = list(mu = identity, sigma = exp))
             private$invlink_ <- invlink
             
             # Check that "formulas" is of the right length and with right names
@@ -175,7 +177,9 @@ SDE <- R6Class(
                     "BM" = "dZ(t) = mu dt + sigma dW(t)",
                     "OU" = "dZ(t) = beta (mu - Z(t)) dt + sigma dW(t)",
                     "CTCRW" = paste0("dV(t) = - beta V(t) dt + sigma dW(t)\n", 
-                                     "dZ(t) = V(t) dt"))
+                                     "dZ(t) = V(t) dt"),
+                    "ESEAL_SSM" = paste0("dL(t) = mu dt + sigma dW(t)\n", 
+                                         "Z(i) ~ N(a1 + a2 L(i)/R(i), tau^2/h(i))"))
             
         },
         
@@ -379,19 +383,6 @@ SDE <- R6Class(
                 map <- c(map, list(coeff_fe = factor(coeff_fe_map)))
             }
             
-            # Define initial state and covariance for Kalman filter
-            if(self$type() == "CTCRW") {
-                # First index for each ID
-                i0 <- c(1, which(self$data()$ID[-n] != self$data()$ID[-1]) + 1)
-                # Initial state = (x1, 0, y1, 0)
-                a0 <- cbind(self$obs()[i0, 1], 0, self$obs()[i0,2], 0)
-                # Initial state covariance
-                P0 <- diag(c(1, 10, 1, 10))
-            } else {
-                a0 <- matrix(0, 1, 1)
-                P0 <- matrix(0, 1, 1)
-            }
-            
             # TMB data object
             tmb_dat <- list(type = self$type(),
                             ID = self$data()$ID,
@@ -400,9 +391,34 @@ SDE <- R6Class(
                             X_fe = X_fe,
                             X_re = X_re,
                             S = S,
-                            ncol_re = ncol_re,
-                            a0 = a0,
-                            P0 = P0)
+                            ncol_re = ncol_re)
+            
+            # Define initial state and covariance for Kalman filter
+            if(self$type() == "CTCRW") {
+                # First index for each ID
+                i0 <- c(1, which(self$data()$ID[-n] != self$data()$ID[-1]) + 1)
+                # Initial state = (x1, 0, y1, 0)
+                tmb_dat$a0 <- cbind(self$obs()[i0, 1], 0, self$obs()[i0,2], 0)
+                # Initial state covariance
+                tmb_dat$P0 <- diag(c(1, 10, 1, 10))
+            } else if(self$type() == "ESEAL_SSM") {
+                # Initial state = initial lipid percentage, obtained from
+                # Depart_Arrive_FatMass_measurements.csv in the supporting
+                # information of Pirotta et al. (2019, Behav. Ecol.)
+                dep_fat <- c(34, 40.3, 38.6, 31.5, 40.4, 40.2, 29.9, 41.8, 28.3, 40.8, 
+                             44, 35.2, 44.9, 40.2, 32.1, 38.3, 35.2, 39.5, 35.6, 30.4, 
+                             41, 32.9, 41.6, 47.1, 34.8, 36.1) 
+                tmb_dat$a0 <- cbind(1, dep_fat)
+                tmb_dat$P0 <- diag(c(0, 20))
+                
+                # Initialise model-specific parameters
+                tmb_par$log_tau <- 0
+                
+                # Number of daily drift dives
+                tmb_dat$h <- self$data()$h
+                # Non-lipid tissue mass
+                tmb_dat$R <- self$data()$R
+            }
             
             # Create TMB object
             tmb_obj <- MakeADFun(data = tmb_dat, parameters = tmb_par, 

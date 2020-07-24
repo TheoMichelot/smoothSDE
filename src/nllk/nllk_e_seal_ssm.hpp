@@ -38,12 +38,12 @@ matrix<Type> makeQ_eseal_ssm(Type s, Type dt) {
 //' 
 //' @param a1 Parameter alpha_1 of SSM
 //' @param a2 Parameter alpha_2 of SSM
-//' @param m Non-lipid tissue mass
+//' @param R Non-lipid tissue mass
 template<class Type>
-matrix<Type> makeZ_eseal_ssm(Type a1, Type a2, Type m) {
+matrix<Type> makeZ_eseal_ssm(Type a1, Type a2, Type R) {
     matrix<Type> Z(1, 2);
     Z(0, 0) = a1;
-    Z(0, 1) = a2 / m;
+    Z(0, 1) = a2 / R;
     return Z;
 }
 
@@ -75,7 +75,7 @@ Type nllk_eseal_ssm(objective_function<Type>* obj) {
     DATA_MATRIX(a0); // Initial state estimate for Kalman filter
     DATA_MATRIX(P0); // Initial state covariance for Kalman filter
     DATA_VECTOR(h); // Number of daily drift dives
-    DATA_VECTOR(m); // Non-lipid tissue mass
+    DATA_VECTOR(R); // Non-lipid tissue mass
     
     // Number of observations
     int n = obs.rows();
@@ -146,7 +146,7 @@ Type nllk_eseal_ssm(objective_function<Type>* obj) {
             Pest = P0;
         } else {
             // Compute Kalman filter matrices
-            matrix<Type> Z = makeZ_eseal_ssm(a1, a2, m(i));
+            matrix<Type> Z = makeZ_eseal_ssm(a1, a2, R(i));
             matrix<Type> H = makeH_eseal_ssm(tau, h(i));
             matrix<Type> T = makeT_eseal_ssm(r(i), dtimes(i));
             matrix<Type> Q = makeQ_eseal_ssm(s(i), dtimes(i));
