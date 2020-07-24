@@ -402,18 +402,21 @@ SDE <- R6Class(
                 # Initial state covariance
                 tmb_dat$P0 <- diag(c(1, 10, 1, 10))
             } else if(self$type() == "ESEAL_SSM") {
-                # Initial state = initial lipid percentage, obtained from
+                # Initial state = initial lipid mass, obtained from
                 # Depart_Arrive_FatMass_measurements.csv in the supporting
                 # information of Pirotta et al. (2019, Behav. Ecol.)
-                dep_fat <- c(34, 40.3, 38.6, 31.5, 40.4, 40.2, 29.9, 41.8, 28.3, 40.8, 
-                             44, 35.2, 44.9, 40.2, 32.1, 38.3, 35.2, 39.5, 35.6, 30.4, 
-                             41, 32.9, 41.6, 47.1, 34.8, 36.1) 
+                dep_fat <- c(34, 40.3, 38.6, 31.5, 40.4, 40.2, 29.9, 41.8, 28.3, 40.8,
+                             44, 35.2, 44.9, 40.2, 32.1, 38.3, 35.2, 39.5, 35.6, 30.4,
+                             41, 32.9, 41.6, 47.1, 34.8, 36.1)
                 tmb_dat$a0 <- cbind(1, dep_fat)
-                tmb_dat$P0 <- diag(c(0, 20))
+                tmb_dat$P0 <- diag(c(0, 10))
                 
                 # Initialise model-specific parameters
-                tmb_par$log_tau <- 0
-                
+                ssm_par <- list(log_tau = log(1),
+                                a1 = -0.578,
+                                log_a2 = log(1.214))
+                tmb_par <- c(ssm_par, tmb_par)
+
                 # Number of daily drift dives
                 tmb_dat$h <- self$data()$h
                 # Non-lipid tissue mass

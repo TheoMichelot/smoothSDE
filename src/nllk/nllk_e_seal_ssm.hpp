@@ -10,27 +10,27 @@ using namespace Eigen;
 
 //' Make T matrix for Kalman filter
 //' 
-//' @param r Drift parameter
+//' @param mu Drift parameter
 //' @param dt Length of time interval
 template<class Type>
-matrix<Type> makeT_eseal_ssm(Type r, Type dt) {
+matrix<Type> makeT_eseal_ssm(Type mu, Type dt) {
     matrix<Type> T(2, 2);
     T.setZero();
     T(0, 0) = 1;
-    T(1, 0) = r * dt;
+    T(1, 0) = mu * dt;
     T(1, 1) = 1;
     return T;
 }
 
 //' Make Q matrix for Kalman filter
 //' 
-//' @param s Diffusion parameter
+//' @param sigma Diffusion parameter
 //' @param dt Length of time interval
 template<class Type>
-matrix<Type> makeQ_eseal_ssm(Type s, Type dt) {
+matrix<Type> makeQ_eseal_ssm(Type sigma, Type dt) {
     matrix<Type> Q(2, 2);
     Q.setZero();
-    Q(1,1) = s * s * dt;
+    Q(1,1) = sigma * sigma * dt;
     return Q;
 }
 
@@ -56,6 +56,25 @@ matrix<Type> makeH_eseal_ssm(Type tau, Type h) {
     matrix<Type> H(1, 1);
     H(0, 0) = tau * tau / h;
     return H;
+}
+
+//' Probability density function of inverse gamma distribution
+//' (used for priors)
+//' 
+//' @param x Value where the pdf should be evaluated
+//' @param shape Shape parameter
+//' @param scale Scale parameter
+//' @param logpdf Should the function return the log-pdf?
+template<class Type>
+Type dinvgamma(Type x, Type shape, Type scale, bool logpdf) {
+    // Log-pdf of inverse gamma
+    Type res = shape * log(scale) - lgamma(shape) - 
+        (shape + 1) * log(x) - scale/x;
+    
+    if(!logpdf)
+        res = exp(res);
+    
+    return res;
 }
 
 //' Penalised negative log-likelihood for state-space model
@@ -91,9 +110,15 @@ Type nllk_eseal_ssm(objective_function<Type>* obj) {
     //============//
     // Other parameters of the SSM
     PARAMETER(log_tau);
-    Type a1 = -0.6; // Values taken from Schick et al.
-    Type a2 = 1.2; // (could not both be recovered in simulations)
+    PARAMETER(a1);
+    PARAMETER(log_a2);
+    Type tau = exp(log_tau);
+    Type a2 = exp(log_a2);
     
+    // Type a1 = -0.6;
+    // Type a2 = 1.2;
+    // Type tau = 1;
+
     PARAMETER_VECTOR(coeff_fe); // Fixed effect parameters
     PARAMETER_VECTOR(log_lambda); // Smoothness parameters
     PARAMETER_VECTOR(coeff_re); // Random effect parameters
@@ -108,11 +133,8 @@ Type nllk_eseal_ssm(objective_function<Type>* obj) {
     }
     
     // Parameters of latent process
-    vector<Type> r = par_mat.col(0).array();
-    vector<Type> s = exp(par_mat.col(1).array());
-    
-    // Type a2 = exp(log_a2);
-    Type tau = exp(log_tau);
+    vector<Type> mu = par_mat.col(0).array();
+    vector<Type> sigma = exp(par_mat.col(1).array());
     
     //================================//
     // Likelihood using Kalman filter //
@@ -148,8 +170,8 @@ Type nllk_eseal_ssm(objective_function<Type>* obj) {
             // Compute Kalman filter matrices
             matrix<Type> Z = makeZ_eseal_ssm(a1, a2, R(i));
             matrix<Type> H = makeH_eseal_ssm(tau, h(i));
-            matrix<Type> T = makeT_eseal_ssm(r(i), dtimes(i));
-            matrix<Type> Q = makeQ_eseal_ssm(s(i), dtimes(i));
+            matrix<Type> T = makeT_eseal_ssm(mu(i), dtimes(i));
+            matrix<Type> Q = makeQ_eseal_ssm(sigma(i), dtimes(i));
             
             if(R_IsNA(asDouble(obs(i,0)))) {
                 // If missing observation
@@ -183,6 +205,15 @@ Type nllk_eseal_ssm(objective_function<Type>* obj) {
             }
         }
     }
+    
+    //========//
+    // Priors //
+    //========//
+    // These priors are taken from Schick et al. 2013
+    // llk = llk + dnorm(a1, Type(0), Type(100));
+    // llk = llk + dnorm(a2, Type(0), Type(100));
+    llk = llk + dinvgamma(sigma(0) * sigma(0), Type(10*n), Type(4*(10*n-1)), true);
+    llk = llk + dinvgamma(tau * tau, Type(n/2), Type(n/2-1), true);
     
     //===================//
     // Smoothing penalty //
