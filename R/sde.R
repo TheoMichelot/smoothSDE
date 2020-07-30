@@ -73,13 +73,21 @@ SDE <- R6Class(
                 stop("'data' should have a time column")
             }
             
-            # Initial parameters (zero if par0 not provided)
+            # Save terms of model formulas
             mats <- self$make_mat()
             ncol_fe <- mats$ncol_fe
             ncol_re <- mats$ncol_re
-            private$coeff_fe_ <- rep(0, sum(ncol_fe))
-            private$coeff_re_ <- rep(0, sum(ncol_re))
+            private$terms_ <- list(ncol_fe = ncol_fe,
+                                   ncol_re = ncol_re,
+                                   names_fe = colnames(mats$X_fe),
+                                   names_re_all = colnames(mats$X_re),
+                                   names_re = names(ncol_re))
             
+            # Initial parameters (zero if par0 not provided)
+            self$update_coeff_fe(rep(0, sum(ncol_fe)))
+            self$update_coeff_re(rep(0, sum(ncol_re)))
+            self$update_lambda(rep(1, length(ncol_re)))
+
             # Set initial fixed coefficients if provided (par0)
             if(!is.null(par0)) {
                 # Number of SDE parameters
@@ -131,6 +139,20 @@ SDE <- R6Class(
         #' @description Random effect parameters
         coeff_re = function() {return(private$coeff_re_)},
         
+        #' @description Smoothness parameters
+        lambda = function() {return(private$lambda_)},
+        
+        #' @description Variance components of smooth terms
+        #' 
+        #' @details This function transforms the smoothness parameter of
+        #' each smooth term into a standard deviation, given by 
+        #' SD = 1/sqrt(lambda). It is particularly helpful to get the
+        #' standard deviations of independent normal random effects.
+        vcomp = function() {return(1/sqrt(private$lambda_))},
+        
+        #' @description Terms of model formulas
+        terms = function() {return(private$terms_)},
+        
         #' @description Output of optimiser after model fitting
         res = function() {
             if (is.null(private$fit_)) {
@@ -181,6 +203,33 @@ SDE <- R6Class(
                     "ESEAL_SSM" = paste0("dL(t) = mu dt + sigma dW(t)\n", 
                                          "Z(i) ~ N(a1 + a2 L(i)/R(i), tau^2/h(i))"))
             
+        },
+        
+        ##############
+        ## Mutators ##
+        ##############
+        #' @description Update fixed effect coefficients
+        #' 
+        #' @param new_coeff New coefficient vector
+        update_coeff_fe = function(new_coeff) {
+            private$coeff_fe_ <- new_coeff
+            names(private$coeff_fe_) <- self$terms()$names_fe
+        },
+        
+        #' @description Update random effect coefficients
+        #' 
+        #' @param new_coeff New coefficient vector
+        update_coeff_re = function(new_coeff) {
+            private$coeff_re_ <- new_coeff
+            names(private$coeff_re_) <- self$terms()$names_re_all
+        },
+        
+        #' @description Update smoothness parameters
+        #' 
+        #' @param new_coeff New smoothness parameter vector
+        update_lambda = function(new_lambda) {
+            private$lambda_ <- new_lambda
+            names(private$lambda_) <- self$terms()$names_re
         },
         
         ###################
@@ -484,8 +533,9 @@ SDE <- R6Class(
             
             # Save parameters
             par_list <- as.list(private$tmb_rep_, "Estimate")
-            private$coeff_fe_ <- par_list$coeff_fe
-            private$coeff_re_ <- par_list$coeff_re
+            self$update_coeff_fe(par_list$coeff_fe)
+            self$update_coeff_re(par_list$coeff_re)
+            self$update_lambda(exp(par_list$log_lambda))
         },
         
         #' @description Get parameters from design matrices
@@ -688,6 +738,8 @@ SDE <- R6Class(
         invlink_ = NULL,
         coeff_fe_ = NULL,
         coeff_re_ = NULL,
+        lambda_ = NULL,
+        terms_ = NULL,
         tmb_obj_ = NULL,
         fit_ = NULL,
         tmb_rep_ = NULL
