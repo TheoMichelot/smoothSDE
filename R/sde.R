@@ -259,6 +259,7 @@ SDE <- R6Class(
             ncol_re <- NULL
             names_fe <- NULL
             names_re <- NULL
+            names_ncol_re <- NULL
             k <- 1
             
             # Loop over formulas
@@ -297,9 +298,17 @@ SDE <- R6Class(
                 # Number of columns for fixed effects
                 ncol_fe <- c(ncol_fe, gam_setup$nsdf)
                 
-                # Number of columns for each random effect
-                if(length(gam_setup$S) > 0)
-                    ncol_re <- c(ncol_re, sapply(gam_setup$S, ncol))
+                if(length(gam_setup$S) > 0) {
+                    # Number of columns for each random effect
+                    sub_ncol_re <- sapply(gam_setup$S, ncol)
+                    ncol_re <- c(ncol_re, sub_ncol_re)
+                    # Hacky way to get the names of smooth terms 
+                    # (one for each column of ncol_re)
+                    # regex from datascience.stackexchange.com/questions/8922
+                    s_terms_i1 <- cumsum(c(1, sub_ncol_re[-length(sub_ncol_re)]))
+                    s_terms <- gsub("(.*)\\..*", "\\1", subnames_re[s_terms_i1])
+                    names_ncol_re <- c(names_ncol_re, s_terms)
+                }
                 
                 k <- k + 1
             }
@@ -310,6 +319,9 @@ SDE <- R6Class(
             X_re <- bdiag_check(X_list_re)
             colnames(X_re) <- names_re
             S <- bdiag_check(S_list)
+            
+            # Name elements of ncol_re
+            names(ncol_re) <- names_ncol_re
             
             return(list(X_fe = X_fe, X_re = X_re, S = S, 
                         ncol_fe = ncol_fe, ncol_re = ncol_re))
