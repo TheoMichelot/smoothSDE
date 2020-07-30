@@ -322,15 +322,17 @@ SDE <- R6Class(
                                      data = cbind(dummy = 1, self$data()), 
                                      fit = FALSE)
                     Xmat <- gam_setup$X
+                    # Extract column names for design matrices
+                    term_names <- gam_setup$term.names
                 } else {
                     # Get design matrix for new data set
                     gam_setup <- gam(formula = update(form, dummy ~ .), 
                                      data = cbind(dummy = 1, self$data()))
                     Xmat <- predict(gam_setup, newdata = new_data, type = "lpmatrix")
+                    # Extract column names for design matrices
+                    term_names <- names(gam_setup$coefficients)
                 }
-                # Extract column names for design matrices
-                term_names <- gam_setup$term.names
-                
+
                 # Fixed effects design matrix
                 X_list_fe[[k]] <- Xmat[, 1:gam_setup$nsdf, drop = FALSE]
                 subnames_fe <- paste0(par_name, ".", term_names[1:gam_setup$nsdf])
