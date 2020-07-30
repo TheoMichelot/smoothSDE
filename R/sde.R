@@ -257,10 +257,15 @@ SDE <- R6Class(
             S_list <- list()
             ncol_fe <- NULL
             ncol_re <- NULL
+            names_fe <- NULL
+            names_re <- NULL
             k <- 1
             
             # Loop over formulas
-            for(form in self$formulas()) {
+            for(j in seq_along(self$formulas())) {
+                form <- self$formulas()[[j]]
+                par_name <- names(self$formulas())[j]
+                
                 # Create matrices based on this formula
                 if(is.null(new_data)) {
                     gam_setup <- gam(formula = update(form, dummy ~ .), 
@@ -273,12 +278,18 @@ SDE <- R6Class(
                                      data = cbind(dummy = 1, self$data()))
                     Xmat <- predict(gam_setup, newdata = new_data, type = "lpmatrix")
                 }
+                # Extract column names for design matrices
+                term_names <- gam_setup$term.names
                 
                 # Fixed effects design matrix
                 X_list_fe[[k]] <- Xmat[, 1:gam_setup$nsdf, drop = FALSE]
+                subnames_fe <- paste0(par_name, ".", term_names[1:gam_setup$nsdf])
+                names_fe <- c(names_fe, subnames_fe)
                 
                 # Random effects design matrix
                 X_list_re[[k]] <- Xmat[, -(1:gam_setup$nsdf), drop = FALSE]
+                subnames_re <- paste0(par_name, ".", term_names[-(1:gam_setup$nsdf)])
+                names_re <- c(names_re, subnames_re)
                 
                 # Smoothing matrix
                 S_list[[k]] <- bdiag_check(gam_setup$S)
@@ -295,7 +306,9 @@ SDE <- R6Class(
             
             # Store as block diagonal matrices
             X_fe <- bdiag_check(X_list_fe)
+            colnames(X_fe) <- names_fe
             X_re <- bdiag_check(X_list_re)
+            colnames(X_re) <- names_re
             S <- bdiag_check(S_list)
             
             return(list(X_fe = X_fe, X_re = X_re, S = S, 
@@ -416,7 +429,7 @@ SDE <- R6Class(
                                 a1 = -0.578,
                                 log_a2 = log(1.214))
                 tmb_par <- c(ssm_par, tmb_par)
-
+                
                 # Number of daily drift dives
                 tmb_dat$h <- self$data()$h
                 # Non-lipid tissue mass
