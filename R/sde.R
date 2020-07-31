@@ -340,8 +340,10 @@ SDE <- R6Class(
                 
                 # Random effects design matrix
                 X_list_re[[k]] <- Xmat[, -(1:gam_setup$nsdf), drop = FALSE]
-                subnames_re <- paste0(par_name, ".", term_names[-(1:gam_setup$nsdf)])
-                names_re <- c(names_re, subnames_re)
+                if(ncol(X_list_re[[k]]) > 0) {
+                    subnames_re <- paste0(par_name, ".", term_names[-(1:gam_setup$nsdf)])
+                    names_re <- c(names_re, subnames_re)                    
+                }
                 
                 # Smoothing matrix
                 S_list[[k]] <- bdiag_check(gam_setup$S)
