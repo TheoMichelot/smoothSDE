@@ -22,7 +22,6 @@ SDE <- R6Class(
         initialize = function(formulas, data, type, response, 
                               par0 = NULL, fixpar = NULL) {
             private$formulas_ <- formulas
-            private$data_ <- data
             private$type_ <- type
             private$response_ <- response
             private$fixpar_ <- fixpar
@@ -67,11 +66,12 @@ SDE <- R6Class(
             } else {
                 data$ID <- factor(data$ID)
             }
-            
+
             # Check that data has a "time" column
             if(!any(colnames(data) == "time")) {
                 stop("'data' should have a time column")
             }
+            private$data_ <- data
             
             # Save terms of model formulas
             mats <- self$make_mat()
@@ -535,11 +535,14 @@ SDE <- R6Class(
             private$tmb_rep_ <- sdreport(private$tmb_obj_, getJointPrecision = TRUE, 
                                          skip.delta.method = FALSE)
             
-            # Save parameters
+            # Save parameter estimates
             par_list <- as.list(private$tmb_rep_, "Estimate")
             self$update_coeff_fe(par_list$coeff_fe)
-            self$update_coeff_re(par_list$coeff_re)
-            self$update_lambda(exp(par_list$log_lambda))
+            if(length(self$terms()$ncol_re) > 0) {
+                # Only save coeff_re and lambda is there are random effects
+                self$update_coeff_re(par_list$coeff_re)
+                self$update_lambda(exp(par_list$log_lambda))
+            }
         },
         
         #' @description Get parameters from design matrices
@@ -578,6 +581,9 @@ SDE <- R6Class(
             n <- nrow(X_fe)/n_par
             # Indices of non-fixed SDE parameters
             ind_estpar <- which(!names(self$formulas()) %in% self$fixpar())
+            # Indices of estimated coefficients in coeff_fe
+            fe_cols <- rep(1:n_par, sde$terms()$ncol_fe)
+            ind_est_fe <- which(fe_cols %in% ind_estpar)
             
             # TMB report
             rep <- self$tmb_rep()
@@ -601,8 +607,8 @@ SDE <- R6Class(
             # In post_fe, set columns for fixed parameters to fixed value,
             # and use posterior draws for non-fixed parameters
             post_fe <- matrix(rep(self$coeff_fe(), each = n_post), 
-                              nrow = n_post, ncol = n_par)
-            post_fe[,ind_estpar] <- par_post[, which(colnames(par_post) == "coeff_fe")]
+                              nrow = n_post, ncol = sum(sde$terms()$ncol_fe))
+            post_fe[,ind_est_fe] <- par_post[, which(colnames(par_post) == "coeff_fe")]
             post_re <- par_post[, which(colnames(par_post) == "coeff_re")]
             lp_post <- X_fe %*% t(post_fe) + X_re %*% t(post_re)
             
