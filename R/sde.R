@@ -589,9 +589,14 @@ SDE <- R6Class(
             rep <- self$tmb_rep()
             
             # Joint covariance matrix
-            jointCov <- as.matrix(solve(rep$jointPrecision))
-            colnames(jointCov) <- colnames(rep$jointPrecision)
-            rownames(jointCov) <- colnames(jointCov)
+            if(!is.null(rep$jointPrecision)) {
+                jointCov <- as.matrix(solve(rep$jointPrecision))
+                colnames(jointCov) <- colnames(rep$jointPrecision)
+                rownames(jointCov) <- colnames(jointCov)
+            } else {
+                # If there are no random effects
+                jointCov <- rep$cov.fixed
+            }
             
             # Vector of all parameters
             par_all <- c(rep$par.fixed, rep$par.random)
