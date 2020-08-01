@@ -254,6 +254,7 @@ SDE <- R6Class(
                     this_form <- "fixed"
                 } else {
                     this_form <- as.character(f[[i]])[2]
+                    this_form <- gsub("\\+", "+\n\t", this_form)
                 }
                 message(names(f)[i], " ~ ", this_form)
             }
