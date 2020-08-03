@@ -583,7 +583,7 @@ SDE <- R6Class(
             # Indices of non-fixed SDE parameters
             ind_estpar <- which(!names(self$formulas()) %in% self$fixpar())
             # Indices of estimated coefficients in coeff_fe
-            fe_cols <- rep(1:n_par, sde$terms()$ncol_fe)
+            fe_cols <- rep(1:n_par, self$terms()$ncol_fe)
             ind_est_fe <- which(fe_cols %in% ind_estpar)
             
             # TMB report
@@ -613,7 +613,7 @@ SDE <- R6Class(
             # In post_fe, set columns for fixed parameters to fixed value,
             # and use posterior draws for non-fixed parameters
             post_fe <- matrix(rep(self$coeff_fe(), each = n_post), 
-                              nrow = n_post, ncol = sum(sde$terms()$ncol_fe))
+                              nrow = n_post, ncol = sum(self$terms()$ncol_fe))
             post_fe[,ind_est_fe] <- par_post[, which(colnames(par_post) == "coeff_fe")]
             post_re <- par_post[, which(colnames(par_post) == "coeff_re")]
             lp_post <- X_fe %*% t(post_fe) + X_re %*% t(post_re)
