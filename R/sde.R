@@ -66,7 +66,7 @@ SDE <- R6Class(
             } else {
                 data$ID <- factor(data$ID)
             }
-
+            
             # Check that data has a "time" column
             if(!any(colnames(data) == "time")) {
                 stop("'data' should have a time column")
@@ -87,7 +87,7 @@ SDE <- R6Class(
             self$update_coeff_fe(rep(0, sum(ncol_fe)))
             self$update_coeff_re(rep(0, sum(ncol_re)))
             self$update_lambda(rep(1, length(ncol_re)))
-
+            
             # Set initial fixed coefficients if provided (par0)
             if(!is.null(par0)) {
                 # Number of SDE parameters
@@ -333,7 +333,7 @@ SDE <- R6Class(
                     # Extract column names for design matrices
                     term_names <- names(gam_setup$coefficients)
                 }
-
+                
                 # Fixed effects design matrix
                 X_list_fe[[k]] <- Xmat[, 1:gam_setup$nsdf, drop = FALSE]
                 subnames_fe <- paste0(par_name, ".", term_names[1:gam_setup$nsdf])
@@ -666,6 +666,34 @@ SDE <- R6Class(
             # Residuals ~ N(0, 1) under assumptions of model and discretization
             res <- (Z[-start_ind] - mean) / sd
             return(res)
+        },
+        
+        #' @description Akaike Information Criterion
+        #'
+        #' This function is adapted from Dave Miller's code in the
+        #' package CTMCdive
+        #'
+        #' @param k Penalty per parameter; the default 
+        #' \code{k = 2} is the classical AIC
+        AIC = function(k = 2) {
+            llk <- - self$res()$value
+            mats <- self$make_mat()
+            
+            # Get effective degrees of freedom for smooths
+            lambda <- self$lambda()
+            edf_re <- edf(X_re = as.matrix(mats$X_re), 
+                          S = as.matrix(mats$S), 
+                          lambda = lambda,
+                          ncol_re = mats$ncol_re)
+            
+            # Degrees of freedom for fixed effects
+            edf_fe <- length(self$res()$par) - length(lambda)
+            
+            # Total EDF
+            edf_total <- edf_re + edf_fe
+            
+            AIC <- - 2 * llk + k * edf_total
+            return(AIC)
         },
         
         ######################

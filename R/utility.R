@@ -89,3 +89,35 @@ cov_grid <- function(var, data, covs = NULL, formulas) {
     
     return(new_data)
 }
+
+#' EDF for smooth terms = trace(F)
+#'
+#' This function is adapted from Dave Miller's code in the
+#' package CTMCdive
+#'
+#' @param X_re Design matrix for random effects 
+#' @param S Smoothing matrix 
+#' @param lambda Smoothing parameter 
+#' @param ncol_re Number of columns of S for each random effect
+#'
+#' @return Trace of F = (Xt X + sp*S)^-1 Xt X
+edf <- function(X_re, S, lambda, ncol_re) {
+    # EDF = 0 if no smooth term
+    if(length(lambda) == 0) {
+        return(0)
+    }
+    
+    # Duplicate lambda enough times
+    lambda <- rep(lambda, ncol_re)
+    
+    # Calculate lambda * S
+    Sbig <- S * lambda
+    
+    # Calculate the hat matrix
+    XtX <- t(X_re) %*% X_re
+    Fi <- solve(XtX + Sbig)
+    F <- Fi %*% XtX
+    
+    # Return the trace
+    return(sum(diag(F)))
+}
