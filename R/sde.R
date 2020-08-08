@@ -16,6 +16,7 @@ SDE <- R6Class(
         #' time, and ID
         #' @param type Type of SDE ("BM", "OU"...)
         #' @param response Vector of names of response variables
+        #' @param par0 Vector of initial values for SDE parameters
         #' @param fixpar Vector of names of fixed SDE parameters
         #' 
         #' @return A new SDE object
@@ -88,7 +89,7 @@ SDE <- R6Class(
             self$update_coeff_re(rep(0, sum(ncol_re)))
             self$update_lambda(rep(1, length(ncol_re)))
             
-            # Set initial fixed coefficients if provided (par0)
+            # Set initial fixed effect coefficients if provided (par0)
             if(!is.null(par0)) {
                 # Number of SDE parameters
                 n_par <- length(self$formulas())
@@ -99,7 +100,7 @@ SDE <- R6Class(
                          paste0(names(self$formulas()), collapse = ", "), ")")
                 }
                 
-                # First column of each X_fe for each SDE parameter
+                # First column of X_fe for each SDE parameter
                 i0 <- c(1, cumsum(ncol_fe)[-n_par] + 1)
                 
                 # Apply link to get parameters on working scale
