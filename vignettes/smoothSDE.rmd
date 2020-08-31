@@ -94,10 +94,8 @@ my_sde$plot_par("temp", n_post = 100)
 
 # To-do list
 
- - Implement elephant seal body condition SSM
-
- - Allow for non-zero mean velocity in CTCRW model
+    - Non-zero mean velocity in CTCRW model
+    
+    - Two-dimensional OU process
  
- - AIC
-
- - Possible improvement to make it easier to set fixpar and par0 (and more?): save ncol_fe somewhere in the object. Or save a vector of length ncol(X_fe), where the value of each entry indicates which SDE parameter it corresponds to. For example, c(1, 1, 2, 3) if the first two columns of X_fe are for the first SDE parameter, the third column is for the second parameter, and the fourth column is for the third parameter.
+    - Remove hard-coded values from e-seal SSM specification in SDE\$setup. Add argument to pass extra parameters/data needed for given model?
