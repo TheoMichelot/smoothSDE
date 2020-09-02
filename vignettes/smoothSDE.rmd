@@ -102,3 +102,5 @@ my_sde$plot_par("temp", n_post = 100)
 
     - Write longer vignette, including a general presentation of the package (R6, different models, reference to arXiv preprint), and a couple of detailed analyses (one with BM/OU and one with CTCRW?).
     
+    - Change SDE$res to SDE$out.
+    
