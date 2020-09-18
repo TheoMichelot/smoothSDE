@@ -104,3 +104,7 @@ my_sde$plot_par("temp", n_post = 100)
     
     - Change SDE$res to SDE$out.
     
+    - Implement decaying-response model
+    
+    - Write predict method similar to hmmTMB
+    
