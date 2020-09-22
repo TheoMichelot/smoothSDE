@@ -155,12 +155,12 @@ SDE <- R6Class(
         terms = function() {return(private$terms_)},
         
         #' @description Output of optimiser after model fitting
-        res = function() {
-            if (is.null(private$fit_)) {
+        out = function() {
+            if (is.null(private$out_)) {
                 stop("Fit model first")
             }
             
-            return(private$fit_)
+            return(private$out_)
         },
         
         #' @description Model object created by TMB. This is the output of 
@@ -527,7 +527,7 @@ SDE <- R6Class(
             }
             
             # Fit model
-            private$fit_ <- do.call(optim, private$tmb_obj_)
+            private$out_ <- do.call(optim, private$tmb_obj_)
             # Get estimates and precision matrix for all parameters
             private$tmb_rep_ <- sdreport(private$tmb_obj_, getJointPrecision = TRUE, 
                                          skip.delta.method = FALSE)
@@ -672,7 +672,7 @@ SDE <- R6Class(
         #' @param k Penalty per parameter; the default 
         #' \code{k = 2} is the classical AIC
         AIC = function(k = 2) {
-            llk <- - self$res()$value
+            llk <- - self$out()$value
             mats <- self$make_mat()
             
             # Get effective degrees of freedom for smooths
@@ -683,7 +683,7 @@ SDE <- R6Class(
                           ncol_re = mats$ncol_re)
             
             # Degrees of freedom for fixed effects
-            edf_fe <- length(self$res()$par) - length(lambda)
+            edf_fe <- length(self$out()$par) - length(lambda)
             
             # Total EDF
             edf_total <- edf_re + edf_fe
@@ -781,7 +781,7 @@ SDE <- R6Class(
         lambda_ = NULL,
         terms_ = NULL,
         tmb_obj_ = NULL,
-        fit_ = NULL,
+        out_ = NULL,
         tmb_rep_ = NULL
     )
 )
