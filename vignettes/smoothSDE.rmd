@@ -3,6 +3,7 @@ title: "smoothSDE vignette"
 author: "Théo Michelot"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_document
+bibliography: refs.bib
 vignette: >
   %\VignetteIndexEntry{smoothSDE vignette}
   %\VignetteEncoding{UTF-8}
@@ -23,21 +24,23 @@ library(smoothSDE)
 set.seed(342)
 ```
 
-# SDE specification
+# Package structure
 
-The package is centred around the R6 class SDE, which encapsulates a varying-coefficient stochastic differential equation model, including formulas for the time-varying parameters. It takes four arguments to create an SDE object: 
+The package is centred around the R6 class _SDE_, which encapsulates a varying-coefficient stochastic differential equation model, as described in by @michelot2020.
+
+The constructor SDE\$new can be used to create a model object, and its main arguments are:
 
  - formulas: List of formulas for the parameters of the SDE. The formulas can include terms from standard R expressions, as well as smooth terms from the mgcv package.
 
  - data: Data frame with columns for the response variable, for the covariate, for ID, and for time.
 
- - response: Name of response variable.
-
  - type: Type of SDE; options are "BM" (Brownian motion), "OU" (Ornstein-Uhlenbeck), "CTCRW" (continuous-time correlated random walk).
 
-# Example
+ - response: Name of response variable(s).
 
-The following code can be used to fit the varying-coefficient CTCRW model to elephant GPS data from Wall et al. (2014). Elliptical time‐density model to estimate wildlife utilization distributions. Methods in Ecology and Evolution, 5(8), 780-790.
+# Example: elephant movement analysis
+
+The following code can be used to fit the varying-coefficient CTCRW model to elephant GPS data from @wall2014, as described in Section 3.2 of @michelot2020.
 
 ```{r example}
 ##################
@@ -104,3 +107,4 @@ my_sde$plot_par("temp", n_post = 100)
     
     - Write predict method similar to hmmTMB
     
+# References
