@@ -18,14 +18,17 @@ SDE <- R6Class(
         #' @param response Vector of names of response variables
         #' @param par0 Vector of initial values for SDE parameters
         #' @param fixpar Vector of names of fixed SDE parameters
+        #' @param other_data Named list of data objects to pass to
+        #' likelihood
         #' 
         #' @return A new SDE object
-        initialize = function(formulas, data, type, response, 
-                              par0 = NULL, fixpar = NULL) {
+        initialize = function(formulas, data, type, response, par0 = NULL, 
+                              fixpar = NULL, other_data = NULL) {
             private$formulas_ <- formulas
             private$type_ <- type
             private$response_ <- response
             private$fixpar_ <- fixpar
+            private$other_data_ <- other_data
             
             if(any(!response %in% colnames(data)))
                 stop("'response' not found in 'data'")
@@ -33,6 +36,7 @@ SDE <- R6Class(
             # Link functions for SDE parameters
             link <- switch (type,
                             "BM" = list(mu = identity, sigma = log),
+                            "BM-t" = list(mu = identity, sigma = log),
                             "OU" = list(mu = identity, beta = log, sigma = log),
                             "CTCRW" = list(beta = log, sigma = log),
                             "ESEAL_SSM" = list(mu = identity, sigma = log))
@@ -41,6 +45,7 @@ SDE <- R6Class(
             # Inverse link functions for SDE parameters
             invlink <- switch (type,
                                "BM" = list(mu = identity, sigma = exp),
+                               "BM-t" = list(mu = identity, sigma = exp),
                                "OU" = list(mu = identity, beta = exp, sigma = exp),
                                "CTCRW" = list(beta = exp, sigma = exp),
                                "ESEAL_SSM" = list(mu = identity, sigma = exp))
@@ -128,6 +133,9 @@ SDE <- R6Class(
         #' @description Name(s) of fixed parameter(s)
         fixpar = function() {return(private$fixpar_)},
         
+        #' @description Named list of additional data objects
+        other_data = function() {return(private$other_data_)},
+        
         #' @description Link functions
         link = function() {return(private$link_)},
         
@@ -198,6 +206,7 @@ SDE <- R6Class(
         eqn = function() {
             switch (self$type(),
                     "BM" = "dZ(t) = mu dt + sigma dW(t)",
+                    "BM-t" = "Brownian motion with t-distributed noise",
                     "OU" = "dZ(t) = beta (mu - Z(t)) dt + sigma dW(t)",
                     "CTCRW" = paste0("dV(t) = - beta V(t) dt + sigma dW(t)\n", 
                                      "dZ(t) = V(t) dt"),
@@ -473,8 +482,15 @@ SDE <- R6Class(
                             S = S,
                             ncol_re = ncol_re)
             
-            # Define initial state and covariance for Kalman filter
-            if(self$type() == "CTCRW") {
+            # Model-specific data objects
+            if(self$type() == "BM-t") {
+                # Pass degrees of freedom for BM-t model
+                tmb_dat$other_data <- self$other_data()$df
+            } else if(self$type() == "BM" | self$type() == "OU") {
+                # No extra data needed for BM and OU models
+                tmb_dat$other_data <- 0                
+            } else if(self$type() == "CTCRW") {
+                # Define initial state and covariance for Kalman filter
                 # First index for each ID
                 i0 <- c(1, which(self$data()$ID[-n] != self$data()$ID[-1]) + 1)
                 # Initial state = (x1, 0, y1, 0)
@@ -482,6 +498,7 @@ SDE <- R6Class(
                 # Initial state covariance
                 tmb_dat$P0 <- diag(c(1, 10, 1, 10))
             } else if(self$type() == "ESEAL_SSM") {
+                # Define initial state and covariance for Kalman filter
                 # Initial state = initial lipid mass
                 tmb_dat$a0 <- cbind(1, rle(self$data()$dep_fat)$values)
                 tmb_dat$P0 <- diag(c(0, 10))
@@ -649,6 +666,11 @@ SDE <- R6Class(
             if(self$type() == "BM") {
                 mean <- Z[-end_ind] + par[-end_ind, "mu"] * dtimes
                 sd <- par[-end_ind, "sigma"] * sqrt(dtimes)
+            } else if (self$type() == "BM-t") {
+                df <- self$other_data()$df # degrees of freedom
+                mean <- Z[-end_ind] + par[-end_ind, "mu"] * dtimes
+                sd <- par[-end_ind, "sigma"] * sqrt(dtimes)
+                sd <- sd / sqrt(df / (df-2)) # this is actually the scale parameter, not the SD any more
             } else if(self$type() == "OU") {
                 mu <- par[-end_ind, "mu"]
                 beta <- par[-end_ind, "beta"]
@@ -660,7 +682,8 @@ SDE <- R6Class(
             }
             
             # Residuals ~ N(0, 1) under assumptions of model and discretization
-            res <- (Z[-start_ind] - mean) / sd
+            res <- rep(NA, n)
+            res[-end_ind] <- (Z[-start_ind] - mean) / sd
             return(res)
         },
         
@@ -774,6 +797,7 @@ SDE <- R6Class(
         type_ = NULL,
         response_ = NULL,
         fixpar_ = NULL,
+        other_data_ = NULL,
         link_ = NULL,
         invlink_ = NULL,
         coeff_fe_ = NULL,
