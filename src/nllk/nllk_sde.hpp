@@ -25,6 +25,7 @@ Type nllk_sde(objective_function<Type>* obj) {
     DATA_SPARSE_MATRIX(X_re); // Design matrix for random effects
     DATA_SPARSE_MATRIX(S); // Penalty matrix
     DATA_IVECTOR(ncol_re); // Number of columns of S and X_re for each random effect
+    DATA_VECTOR(other_data); // Optional extra data needed to evaluate the likelihood
     
     // Number of observations
     int n = obs.rows();
@@ -57,7 +58,7 @@ Type nllk_sde(objective_function<Type>* obj) {
         // No contribution if first observation of the track
         if(ID(i-1) == ID(i)) {
             llk = llk + tr_dens<Type>(obs(i, 0), obs(i-1, 0), dtimes(i-1), 
-                                      par_mat.row(i-1), true, type);
+                                      par_mat.row(i-1), true, type, other_data);
         }
     }
     
