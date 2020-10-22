@@ -9,7 +9,7 @@ Type objective_function<Type>::operator() () {
     // SDE type
     DATA_STRING(type);
     
-    if (type == "BM" || type == "OU") {
+    if (type == "BM" || type == "BM-t" ||type == "OU") {
         return nllk_sde(this);
     } else if (type == "CTCRW") {
         return nllk_ctcrw(this);
