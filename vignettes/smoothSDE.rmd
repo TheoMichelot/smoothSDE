@@ -30,18 +30,16 @@ The R package smoothSDE implements varying-coefficient versions of several popul
 
 ## Varying-coefficient stochastic differential equations
 
-Varying-coefficient SDEs, and the inferential method implemented in smoothSDE, are described by @michelot2020. The model formulations currently implemented in the package are described in the following table.
+Varying-coefficient SDEs, and the inferential method implemented in smoothSDE, are described by @michelot2020. The main model formulations currently implemented in the package are described in the following table.
  
 | Model                                  | Name        | Parameters |                              | Link functions |
 |----------------------------------------|-------------|------------|------------------------------|----------------|
 | Brownian motion                        | "BM"        | drift      | $\mu \in (-\infty, +\infty)$ | identity       |
 |                                        |             | diffusion  | $\sigma > 0$                 | log            |
-| Ornstein-Uhlenbeck                     | "OU"        | mean       | $\mu \in (-\infty, +\infty)$ | identity       |
+| Ornstein-Uhlenbeck process             | "OU"        | mean       | $\mu \in (-\infty, +\infty)$ | identity       |
 |                                        |             | reversion  | $\beta > 0$                  | log            |
 |                                        |             | diffusion  | $\sigma > 0$                 | log            |
 | Continuous-time correlated random walk | "CTCRW"     | reversion  | $\beta > 0$                  | log            |
-|                                        |             | diffusion  | $\sigma > 0$                 | log            |
-| Elephant seal fat model                | "ESEAL-SSM" | drift      | $\mu \in (-\infty, +\infty)$ | identity       |
 |                                        |             | diffusion  | $\sigma > 0$                 | log            |
 
 ## SDE model class
