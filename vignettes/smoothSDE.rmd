@@ -24,13 +24,31 @@ library(smoothSDE)
 set.seed(342)
 ```
 
-# Package structure
+The R package smoothSDE implements varying-coefficient versions of several popular stochastic differential equations (SDEs). It can be used to estimate linear or non-linear relationships between SDE parameters and time-varying covariates. It also provides functions for model visualisation, uncertainty estimation, and residual analysis.
 
-The package is centred around the R6 class _SDE_, which encapsulates a varying-coefficient stochastic differential equation model, as described in by @michelot2020.
+# Package description
 
-The constructor SDE\$new can be used to create a model object, and its main arguments are:
+## Varying-coefficient stochastic differential equations
 
- - formulas: List of formulas for the parameters of the SDE. The formulas can include terms from standard R expressions, as well as smooth terms from the mgcv package.
+Varying-coefficient SDEs, and the inferential method implemented in smoothSDE, are described by @michelot2020. The model formulations currently implemented in the package are described in the following table.
+ 
+| Model                                  | Name        | Parameters |                              | Link functions |
+|----------------------------------------|-------------|------------|------------------------------|----------------|
+| Brownian motion                        | "BM"        | drift      | $\mu \in (-\infty, +\infty)$ | identity       |
+|                                        |             | diffusion  | $\sigma > 0$                 | log            |
+| Ornstein-Uhlenbeck                     | "OU"        | mean       | $\mu \in (-\infty, +\infty)$ | identity       |
+|                                        |             | reversion  | $\beta > 0$                  | log            |
+|                                        |             | diffusion  | $\sigma > 0$                 | log            |
+| Continuous-time correlated random walk | "CTCRW"     | reversion  | $\beta > 0$                  | log            |
+|                                        |             | diffusion  | $\sigma > 0$                 | log            |
+| Elephant seal fat model                | "ESEAL-SSM" | drift      | $\mu \in (-\infty, +\infty)$ | identity       |
+|                                        |             | diffusion  | $\sigma > 0$                 | log            |
+
+## SDE model class
+
+The package is centred around the R6 class _SDE_, which encapsulates the model formulas and the data for a varying-coefficient SDE model. The constructor SDE\$new can be used to create a model object, and its main arguments are:
+
+ - formulas: List of formulas for the parameters of the SDE. The formulas can include terms from standard R expressions, as well as smooth terms and random effects from the mgcv package (@wood2017).
 
  - data: Data frame with columns for the response variable, for the covariate, for ID, and for time.
 
@@ -42,10 +60,8 @@ The constructor SDE\$new can be used to create a model object, and its main argu
 
 The following code can be used to fit the varying-coefficient CTCRW model to elephant GPS data from @wall2014, as described in Section 3.2 of @michelot2020.
 
-```{r example}
-##################
-## Prepare data ##
-##################
+We first download the data from the Movebank data repository, and keep the relevant rows and columns. Note that the CTCRW model requires projected Easting-Northing locations (rather than longitude-latitude), so that's what we are working with here.
+```{r example-prep, eval = FALSE}
 # Load data and keep relevant columns
 URL <- paste0("https://www.datarepository.movebank.org/bitstream/handle/",
               "10255/move.373/Elliptical%20Time-Density%20Model%20%28Wall%",
@@ -56,7 +72,7 @@ keep_cols <- c(11, 13, 14, 17, 4, 5, 6)
 raw_cols <- raw[, keep_cols]
 colnames(raw_cols) <- c("ID", "x", "y", "date", "lon", "lat", "temp")
 
-# Only keep six months to eliminate seasonal effects
+# Only keep five months to eliminate seasonal effects
 track <- subset(raw_cols, ID == unique(ID)[1])
 dates <- as.POSIXlt(track$date, tz = "GMT")
 times <- as.numeric(dates - min(dates))/3600
@@ -69,31 +85,58 @@ times <- times[keep_rows]
 # Convert to km
 track$x <- track$x/1000
 track$y <- track$y/1000
+```
 
-###############
-## Fit model ##
-###############
-# Data set including ID, time, responses (x, y), and covariate (temp)
-data <- data.frame(ID = 1, x = track$x, y = track$y, 
-                   temp = track$temp, time = times)
+We create a data frame that includes columns for
 
-# Model formulas for CTCRW parameters
+ - time series identifier "ID". This is required when fitting the model to several time series, treated as independent realisations of the same underlying process. Here, we only have one time series, so all rows have the same ID.
+ 
+ - responses "x" and "y". Here, there are two response variables because the CTCRW model works in two dimensions (Easting and Northing). For other models, such as Brownian motion and Ornstein-Uhlenbeck process, only one response variable is expected.
+
+ - covariate "temp". We will later estimate the effect of this covariate on the parameters of the elephant's velocity process.
+ 
+ - time. This should be a numeric column for time, used to compute time intervals between observations.
+ 
+```{r example-data, eval = FALSE}
+data <- data.frame(ID = 1, 
+                   x = track$x, 
+                   y = track$y, 
+                   temp = track$temp, 
+                   time = times)
+
+head(data)
+```
+
+In this analysis, we want to look into the effects of external temperature on the elephant's movement. We specify this by expressing both parameters of the CTCRW model (velocity reversion $\beta$ and velocity diffusion $\sigma$) as smooth functions of the temperature. For these smooth terms, we use the syntax from the R package mgcv; here defining cubic regression splines with 10 basis functions and with shrinkage. See the [mgcv documentation](https://stat.ethz.ch/R-manual/R-patched/library/mgcv/html/smooth.terms.html) for more details.
+
+``` {r example-form, eval = FALSE}
 formulas <- list(beta = ~ s(temp, k = 10, bs = "cs"), 
                  sigma = ~ s(temp, k = 10, bs = "cs"))
+```
 
-# Type of SDE model: continuous-time correlated random walk
-type <- "CTCRW"
 
-# Create SDE model object
-my_sde <- SDE$new(formulas = formulas, data = data, type = type, 
+Finally, we use the constructor of the SDE class to create an object for this model, passing as input the formulas, data, type of model, and name of response variables.
+
+``` {r example-create, eval = FALSE}
+my_sde <- SDE$new(formulas = formulas, 
+                  data = data, 
+                  type = "CTCRW", 
                   response = c("x", "y"))
+```
 
-# Fit model
+Once the model has been created, the parameters can be estimated using the method "fit":
+
+``` {r example-fit, eval = FALSE}
 my_sde$fit()
+```
 
-# Plot results (parameters as functions of covariate)
+Finally, the relationship between the SDE parameters and the covariates can be plotted with the method "plot_par". The function can also generate posterior samples for the estimated relationship, to visualise uncertainty. Here, we plot the CTCRW parameters as function of temperature, with 100 posterior samples:
+
+``` {r example-plot, eval = FALSE}
 my_sde$plot_par("temp", n_post = 100)
 ```
+
+As described by @michelot2020, these results suggest that this elephant tended to move less at high temperatures, with a big drop in speed over 40 degrees Celsius.
 
 # To-do list
 
@@ -108,5 +151,7 @@ my_sde$plot_par("temp", n_post = 100)
     - Implement decaying-response model
     
     - Write predict method similar to hmmTMB
+    
+    - Simulation function?
     
 # References
