@@ -42,7 +42,9 @@ Varying-coefficient SDEs, and the inferential method implemented in smoothSDE, a
 | Continuous-time correlated random walk | "CTCRW"     | reversion  | $\beta > 0$                  | log            |
 |                                        |             | diffusion  | $\sigma > 0$                 | log            |
 
-## SDE model class
+Brownian motion and the Ornstein-Uhlenbeck process have a wide range of applications (e.g., ecology, finance), and the continuous-time correlated random walk is a popular model of animal movement described by @johnson2008.
+
+## SDE class
 
 The package is centred around the R6 class _SDE_, which encapsulates the model formulas and the data for a varying-coefficient SDE model. The constructor SDE\$new can be used to create a model object, and its main arguments are:
 
@@ -143,8 +145,6 @@ As described by @michelot2020, these results suggest that this elephant tended t
     - Two-dimensional OU process
     
     - One-dimensional CTCRW process
- 
-    - Write longer vignette, including a general presentation of the package (R6, different models, reference to arXiv preprint), and a couple of detailed analyses (one with BM/OU and one with CTCRW?).
     
     - Implement decaying-response model
     
