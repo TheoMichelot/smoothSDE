@@ -713,6 +713,8 @@ SDE <- R6Class(
             # Format matrices for lower and upper bounds
             low <- matrix(CI[,1], ncol = n_par)
             upp <- matrix(CI[,2], ncol = n_par)
+            colnames(low) <- names(self$formulas())
+            colnames(upp) <- names(self$formulas())
             
             return(list(low = low, upp = upp))
         },
