@@ -61,7 +61,7 @@ The package is centred around the R6 class _SDE_, which encapsulates the model f
 The following code can be used to fit the varying-coefficient CTCRW model to elephant GPS data from @wall2014, as described in Section 3.2 of @michelot2020.
 
 We first download the data from the Movebank data repository, and keep the relevant rows and columns. Note that the CTCRW model requires projected Easting-Northing locations (rather than longitude-latitude), so that's what we are working with here.
-```{r example-prep, eval = FALSE}
+```{r example-prep}
 # Load data and keep relevant columns
 URL <- paste0("https://www.datarepository.movebank.org/bitstream/handle/",
               "10255/move.373/Elliptical%20Time-Density%20Model%20%28Wall%",
@@ -97,7 +97,7 @@ We create a data frame that includes columns for
  
  - time. This should be a numeric column for time, used to compute time intervals between observations.
  
-```{r example-data, eval = FALSE}
+```{r example-data}
 data <- data.frame(ID = 1, 
                    x = track$x, 
                    y = track$y, 
@@ -109,7 +109,7 @@ head(data)
 
 In this analysis, we want to look into the effects of external temperature on the elephant's movement. We specify this by expressing both parameters of the CTCRW model (velocity reversion $\beta$ and velocity diffusion $\sigma$) as smooth functions of the temperature. For these smooth terms, we use the syntax from the R package mgcv; here defining cubic regression splines with 10 basis functions and with shrinkage. See the [mgcv documentation](https://stat.ethz.ch/R-manual/R-patched/library/mgcv/html/smooth.terms.html) for more details.
 
-``` {r example-form, eval = FALSE}
+``` {r example-form}
 formulas <- list(beta = ~ s(temp, k = 10, bs = "cs"), 
                  sigma = ~ s(temp, k = 10, bs = "cs"))
 ```
@@ -117,7 +117,7 @@ formulas <- list(beta = ~ s(temp, k = 10, bs = "cs"),
 
 Finally, we use the constructor of the SDE class to create an object for this model, passing as input the formulas, data, type of model, and name of response variables.
 
-``` {r example-create, eval = FALSE}
+``` {r example-create}
 my_sde <- SDE$new(formulas = formulas, 
                   data = data, 
                   type = "CTCRW", 
@@ -126,17 +126,30 @@ my_sde <- SDE$new(formulas = formulas,
 
 Once the model has been created, the parameters can be estimated using the method "fit":
 
-``` {r example-fit, eval = FALSE}
+``` {r example-fit}
 my_sde$fit()
 ```
 
 Finally, the relationship between the SDE parameters and the covariates can be plotted with the method "plot_par". The function can also generate posterior samples for the estimated relationship, to visualise uncertainty. Here, we plot the CTCRW parameters as function of temperature, with 100 posterior samples:
 
-``` {r example-plot, eval = FALSE}
+``` {r example-plot}
 my_sde$plot_par("temp", n_post = 100)
 ```
 
 As described by @michelot2020, these results suggest that this elephant tended to move less at high temperatures, with a big drop in speed over 40 degrees Celsius.
+
+Estimates and point-wise confidence intervals of the SDE parameters can also be computed for given covariate values, using the predict_par method.
+
+``` {r example-predict}
+# Data frame with covariate values for prediction
+new_data <- data.frame(temp = c(20, 30, 40))
+
+# Get estimates and CIs
+par <- my_sde$predict_par(new_data = new_data, CI = TRUE)
+
+# Estimates and 95% CIs for each temperature value given as input
+par
+```
 
 # To-do list
 
@@ -147,8 +160,6 @@ As described by @michelot2020, these results suggest that this elephant tended t
     - One-dimensional CTCRW process
     
     - Implement decaying-response model
-    
-    - Write predict method similar to hmmTMB
     
     - Simulation function?
     
