@@ -702,8 +702,8 @@ SDE <- R6Class(
             # posterior sample of coeff_fe and coeff_re
             post_par <- sapply(1:n_post, function(i) {
                 self$par_all(X_fe = X_fe, X_re = X_re, 
-                            coeff_fe = post_coeff_fe[i,], 
-                            coeff_re = post_coeff_re[i,])
+                             coeff_fe = post_coeff_fe[i,], 
+                             coeff_re = post_coeff_re[i,])
             })
             
             # Get confidence intervals as quantiles of posterior tpms
@@ -715,6 +715,59 @@ SDE <- R6Class(
             upp <- matrix(CI[,2], ncol = n_par)
             
             return(list(low = low, upp = upp))
+        },
+        
+        #' @description Predict SDE parameters
+        #' 
+        #' @param new_data Data frame containing covariate values for which the
+        #' SDE parameters should be predicted.
+        #' @param CI Logical argument: should the function return confidence
+        #' intervals for the parameters? Default: FALSE.
+        #' @param level Confidence level (default: 0.95 for 95\% confidence 
+        #' intervals) if \code{CI = TRUE}.
+        #' @param n_post Number of posterior samples from which the confidence
+        #' intervals are calculated if \code{CI = TRUE}. Larger values will reduce 
+        #' approximation error, but increase computation time. Defaults to 1000.
+        #' 
+        #' @return If \code{CI = FALSE}, returns a matrix of point estimates, 
+        #' where each row corresponds to one row of \code{new_data}. If 
+        #' \code{CI = TRUE}, returns a list with elements:
+        #' \itemize{
+        #'   \item{\code{estimate}}{Matrix of point estimates}
+        #'   \item{\code{low}}{Matrix of lower bounds of confidence intervals}
+        #'   \item{\code{upp}}{Matrix of upper bounds of confidence intervals}
+        #' }
+        predict_par = function(new_data = NULL, CI = FALSE, level = 0.95, n_post = 1e3) {
+            # Are there covariates in the observation process model?
+            nocovs <- all(self$formulas() == as.formula("~1"))
+            
+            # Check that new_data is provided if necessary, else create dummy dataframe
+            if(is.null(new_data)) {
+                if(nocovs) {
+                    new_data <- data.frame(dummy = 1)
+                } else {
+                    stop("'new_data' must be provided if there are covariates in the model")      
+                }
+            }
+            
+            # Model matrices for new_data  
+            mats <- self$make_mat(new_data = new_data)
+            
+            # SDE parameters
+            par <- self$par_all(X_fe = mats$X_fe, X_re = mats$X_re)
+            
+            if(CI) {
+                # Confidence intervals
+                CIs <- self$CI(X_fe = mats$X_fe, X_re = mats$X_re,
+                               level = level, n_post = n_post)
+                
+                # Return point estimates and confidence interval bounds  
+                preds <- list(estimate = par, low = CIs$low, upp = CIs$upp)
+            } else {
+                preds <- par
+            }
+            
+            return(preds)
         },
         
         #' @description Model residuals
