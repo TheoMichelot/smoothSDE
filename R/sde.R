@@ -845,6 +845,72 @@ SDE <- R6Class(
             return(AIC)
         },
         
+        
+        ################
+        ## Simulation ##
+        ################
+        #' @description Simulate from SDE model
+        #' 
+        #' @param data Data frame for input data. Should have at least one column 'time' for
+        #' times of observations, and columns for covariates if necessary.
+        #' @param z0 Optional value for first observation of simulated time series.
+        #' Default: 0.
+        #' 
+        #' @return Input data frame with extra column for simulated time series
+        simulate = function(data, z0 = 0) {
+            # Check that data includes times of observations
+            if(is.null(data$time)) {
+                stop("'data' should have a column named 'time'")
+            }
+            if(is.null(data$ID)) {
+                data$ID <- factor(1)
+            }
+            
+            # Number of observations
+            n <- nrow(data)
+            # Times intervals    
+            dtimes <- diff(data$time)
+            
+            # Create SDE parameters
+            mats <- self$make_mat(new_data = data)
+            par <- self$par_all(X_fe = mats$X_fe, X_re = mats$X_re)
+            
+            # Initialize vector of simulated observations
+            obs <- rep(NA, n)
+            
+            # Loop over IDs
+            for(id in seq_along(unique(data$ID))) {
+                # Get relevant rows of data
+                ind <- which(data$ID == unique(data$ID)[id])
+                sub_n <- length(ind)
+                sub_obs <- rep(z0, sub_n)
+                
+                # Loop over observation times
+                for(i in 2:sub_n) {
+                    # Generate observation from transition density
+                    if(self$type() == "BM") {
+                        mean <- sub_obs[i-1] + par[i-1, 1] * dtimes[i-1]
+                        sd <- par[i-1, 2] * sqrt(dtimes[i-1])
+                        sub_obs[i] <- rnorm(1, mean = mean, sd = sd)
+                    } else if(self$type() == "OU") {
+                        mean <- sub_obs[i-1] + par[i-1, 1] + 
+                            exp(- par[i-1, 2] * dtimes[i-1]) * (sub_obs[i-1] - par[i-1, 1])
+                        sd <- par[i-1, 3] / sqrt(2 * par[i-1, 2]) * sqrt(1 - exp(-2*par[i-1, 2]*dtimes[i-1]))
+                        sub_obs[i] <- rnorm(n = 1, mean = mean, sd = sd)
+                    } else {
+                        stop(paste("Simulation not implemented yet for", self$type(), "model."))
+                    }
+                }
+                
+                # Update observation vector
+                obs[ind] <- sub_obs
+            }
+            
+            # Add simulated variable to data frame
+            data[[self$response()]] <- obs
+            return(data)
+        },
+        
         ######################
         ## Plotting methods ##
         ######################
