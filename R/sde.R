@@ -866,40 +866,39 @@ SDE <- R6Class(
                 data$ID <- factor(1)
             }
             
-            # Number of observations
-            n <- nrow(data)
-            # Times intervals    
-            dtimes <- diff(data$time)
-            
             # Create SDE parameters
             mats <- self$make_mat(new_data = data)
             par <- self$par_all(X_fe = mats$X_fe, X_re = mats$X_re)
             
             # Initialize vector of simulated observations
-            obs <- rep(NA, n)
+            obs <- rep(NA, nrow(data))
             
             # Loop over IDs
             for(id in seq_along(unique(data$ID))) {
                 # Get relevant rows of data
                 ind <- which(data$ID == unique(data$ID)[id])
+                dtimes <- diff(data$time[ind])
                 sub_n <- length(ind)
                 sub_obs <- rep(z0, sub_n)
+                sub_par <- par[ind,]
                 
-                # Loop over observation times
-                for(i in 2:sub_n) {
-                    # Generate observation from transition density
-                    if(self$type() == "BM") {
-                        mean <- sub_obs[i-1] + par[i-1, 1] * dtimes[i-1]
-                        sd <- par[i-1, 2] * sqrt(dtimes[i-1])
-                        sub_obs[i] <- rnorm(1, mean = mean, sd = sd)
-                    } else if(self$type() == "OU") {
-                        mean <- sub_obs[i-1] + par[i-1, 1] + 
-                            exp(- par[i-1, 2] * dtimes[i-1]) * (sub_obs[i-1] - par[i-1, 1])
-                        sd <- par[i-1, 3] / sqrt(2 * par[i-1, 2]) * sqrt(1 - exp(-2*par[i-1, 2]*dtimes[i-1]))
+                if(self$type() == "BM") {
+                    # If BM, generate all increments directly
+                    mean <- sub_par[-sub_n, 1] * dtimes
+                    sd <- sub_par[-sub_n, 2] * sqrt(dtimes)
+                    sub_obs <- cumsum(c(z0, rnorm(sub_n - 1, mean = mean, sd = sd)))
+                } else if(self$type() == "OU") {
+                    # If OU, loop over observation times
+                    for(i in 2:sub_n) {
+                        # Generate observation from OU transition density
+                        mean <- sub_obs[i-1] + sub_par[i-1, 1] + 
+                            exp(- sub_par[i-1, 2] * dtimes[i-1]) * (sub_obs[i-1] - sub_par[i-1, 1])
+                        sd <- sub_par[i-1, 3] / sqrt(2 * sub_par[i-1, 2]) * 
+                            sqrt(1 - exp(-2*sub_par[i-1, 2]*dtimes[i-1]))
                         sub_obs[i] <- rnorm(n = 1, mean = mean, sd = sd)
-                    } else {
-                        stop(paste("Simulation not implemented yet for", self$type(), "model."))
                     }
+                } else {
+                    stop(paste("Simulation not implemented yet for", self$type(), "model."))
                 }
                 
                 # Update observation vector
