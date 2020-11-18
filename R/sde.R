@@ -437,6 +437,7 @@ SDE <- R6Class(
             # (First fixed effects, then random effects)
             tmb_par <- list(coeff_fe = self$coeff_fe(),
                             log_lambda = 0,
+                            log_decay = 0,
                             coeff_re = 0)
             
             # Setup random effects
@@ -515,6 +516,15 @@ SDE <- R6Class(
                 tmb_dat$R <- self$data()$R
             }
             
+            # Decaying response model
+            if(!is.null(self$other_data()$t_decay)) {
+                tmb_dat$t_decay <- self$other_data()$t_decay
+                tmb_dat$col_decay <- self$other_data()$col_decay
+            } else {
+                tmb_dat$t_decay <- 0
+                tmb_dat$col_decay <- 0
+            }
+            
             # Create TMB object
             tmb_obj <- MakeADFun(data = tmb_dat, parameters = tmb_par, 
                                  dll = "smoothSDE", silent = silent,
@@ -574,6 +584,15 @@ SDE <- R6Class(
                 coeff_fe <- self$coeff_fe()
             if(is.null(coeff_re))
                 coeff_re <- self$coeff_re()
+            
+            if(!is.null(self$other_data()$col_decay)) {
+                col_decay <- self$other_data()$col_decay
+                t_decay <- self$other_data()$t_decay
+                decay_rate <- exp(self$out()$par["log_decay"])
+                for(i in col_decay) {
+                    X_re[,i] <- X_re[,i] * exp(-decay_rate * t_decay)
+                }
+            }
             
             # Get linear predictor and put into matrix where each row
             # corresponds to a time step and each column to a parameter

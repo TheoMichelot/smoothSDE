@@ -26,6 +26,8 @@ Type nllk_sde(objective_function<Type>* obj) {
     DATA_SPARSE_MATRIX(S); // Penalty matrix
     DATA_IVECTOR(ncol_re); // Number of columns of S and X_re for each random effect
     DATA_VECTOR(other_data); // Optional extra data needed to evaluate the likelihood
+    DATA_VECTOR(t_decay);
+    DATA_IVECTOR(col_decay);
     
     // Number of observations
     int n = obs.rows();
@@ -37,10 +39,25 @@ Type nllk_sde(objective_function<Type>* obj) {
     //============//
     PARAMETER_VECTOR(coeff_fe); // Fixed effect parameters
     PARAMETER_VECTOR(log_lambda); // Smoothness parameters
+    PARAMETER(log_decay);
     PARAMETER_VECTOR(coeff_re); // Random effect parameters
     
+    Type decay_rate = exp(log_decay);
+    
+    matrix<Type> X_re_copy = X_re;
+    
+    if(t_decay.size() > 1) {
+        for(int i = 0; i < col_decay.size(); i++) {
+            int i_col = col_decay(i) - 1;
+            vector<Type> decay = exp(-decay_rate * t_decay);
+            vector<Type> X_col = X_re.col(i_col);
+            vector<Type> X_decay = X_col * decay;
+            X_re_copy.col(i_col) = X_decay;
+        }
+    }
+    
     // Derived parameters (linear predictors)
-    vector<Type> par_vec = X_fe * coeff_fe + X_re * coeff_re;
+    vector<Type> par_vec = X_fe * coeff_fe + X_re_copy * coeff_re;
     matrix<Type> par_mat(n, par_vec.size()/n);
     for(int i = 0; i < par_mat.cols(); i++) {
         // Matrix with one row for each time step and
