@@ -585,15 +585,6 @@ SDE <- R6Class(
             if(is.null(coeff_re))
                 coeff_re <- self$coeff_re()
             
-            if(!is.null(self$other_data()$col_decay)) {
-                col_decay <- self$other_data()$col_decay
-                t_decay <- self$other_data()$t_decay
-                decay_rate <- exp(self$out()$par["log_decay"])
-                for(i in col_decay) {
-                    X_re[,i] <- X_re[,i] * exp(-decay_rate * t_decay)
-                }
-            }
-            
             # Get linear predictor and put into matrix where each row
             # corresponds to a time step and each column to a parameter
             lp <- X_fe %*% coeff_fe + X_re %*% coeff_re
