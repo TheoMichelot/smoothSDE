@@ -222,24 +222,24 @@ SDE <- R6Class(
         #' 
         #' @param new_coeff New coefficient vector
         update_coeff_fe = function(new_coeff) {
-            private$coeff_fe_ <- new_coeff
-            names(private$coeff_fe_) <- self$terms()$names_fe
+            private$coeff_fe_ <- matrix(new_coeff)
+            rownames(private$coeff_fe_) <- self$terms()$names_fe
         },
         
         #' @description Update random effect coefficients
         #' 
         #' @param new_coeff New coefficient vector
         update_coeff_re = function(new_coeff) {
-            private$coeff_re_ <- new_coeff
-            names(private$coeff_re_) <- self$terms()$names_re_all
+            private$coeff_re_ <- matrix(new_coeff)
+            rownames(private$coeff_re_) <- self$terms()$names_re_all
         },
         
         #' @description Update smoothness parameters
         #' 
         #' @param new_coeff New smoothness parameter vector
         update_lambda = function(new_lambda) {
-            private$lambda_ <- new_lambda
-            names(private$lambda_) <- self$terms()$names_re
+            private$lambda_ <- matrix(new_lambda)
+            rownames(private$lambda_) <- self$terms()$names_re
         },
         
         ###################
@@ -523,6 +523,7 @@ SDE <- R6Class(
             } else {
                 tmb_dat$t_decay <- 0
                 tmb_dat$col_decay <- 0
+                map <- c(map, list(log_decay = factor(NA)))
             }
             
             # Create TMB object
