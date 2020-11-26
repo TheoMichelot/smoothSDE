@@ -2,7 +2,11 @@
 title: "smoothSDE vignette"
 author: "Théo Michelot"
 date: "`r Sys.Date()`"
-output: rmarkdown::html_document
+output:
+  pdf_document:
+    number_sections: yes
+  html_document:
+    number_sections: yes
 bibliography: refs.bib
 vignette: >
   %\VignetteIndexEntry{smoothSDE vignette}
@@ -160,7 +164,5 @@ par
     - One-dimensional CTCRW process
     
     - Implement decaying-response model
-    
-    - Simulation function?
     
 # References
