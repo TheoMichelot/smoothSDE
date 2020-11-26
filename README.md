@@ -11,4 +11,4 @@ It can be installed from Github using devtools:
 devtools::install_github("TheoMichelot/smoothSDE")
 ```
 
-To get started, have a look at [the vignette](https://github.com/TheoMichelot/smoothSDE/blob/master/vignettes/smoothSDE.rmd). It includes example code for the analysis of an elephant movement data set. More will be added soon!
+To get started, have a look at [the vignette](https://github.com/TheoMichelot/smoothSDE/raw/master/vignettes/smoothSDE.pdf). It includes example code for the analysis of an elephant movement data set. More will be added soon!
