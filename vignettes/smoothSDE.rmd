@@ -136,7 +136,7 @@ my_sde$fit()
 
 Finally, the relationship between the SDE parameters and the covariates can be plotted with the method "plot_par". The function can also generate posterior samples for the estimated relationship, to visualise uncertainty. Here, we plot the CTCRW parameters as function of temperature, with 100 posterior samples:
 
-``` {r example-plot}
+``` {r example-plot, fig.width = 5, fig.height = 4, fig.show="hold", out.width="50%"}
 my_sde$plot_par("temp", n_post = 100)
 ```
 
