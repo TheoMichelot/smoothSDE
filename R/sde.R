@@ -622,7 +622,14 @@ SDE <- R6Class(
             
             # Joint covariance matrix
             if(!is.null(rep$jointPrecision)) {
-                jointCov <- as.matrix(solve(rep$jointPrecision))
+                jointCov <- try(as.matrix(solve(rep$jointPrecision)), silent = TRUE)
+                if(inherits(jointCov, "try-error")) {
+                    message <- jointCov[1]
+                    jointCov <- ginv(as.matrix(rep$jointPrecision))
+                    warning(paste0("Inversion of precision matrix using 'solve' failed with ",
+                    "following message; using 'MASS::ginv' instead (uncertainty estimates may ",
+                    "be unreliable).\n", message))
+                }
                 colnames(jointCov) <- colnames(rep$jointPrecision)
                 rownames(jointCov) <- colnames(jointCov)
             } else {
