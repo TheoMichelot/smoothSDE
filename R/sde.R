@@ -520,7 +520,7 @@ SDE <- R6Class(
             if(!is.null(self$other_data()$t_decay)) {
                 tmb_dat$t_decay <- self$other_data()$t_decay
                 tmb_dat$col_decay <- self$other_data()$col_decay
-            } else {
+            } else if(self$type() %in% c("BM", "BM-t", "OU")) {
                 tmb_dat$t_decay <- 0
                 tmb_dat$col_decay <- 0
                 map <- c(map, list(log_decay = factor(NA)))
