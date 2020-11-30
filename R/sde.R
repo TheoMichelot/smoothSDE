@@ -533,6 +533,8 @@ SDE <- R6Class(
             
             # Negative log-likelihood function
             private$tmb_obj_ <- tmb_obj
+            
+            return(NULL)
         },
         
         #' @description Model fitting
@@ -568,6 +570,8 @@ SDE <- R6Class(
                 self$update_coeff_re(par_list$coeff_re)
                 self$update_lambda(exp(par_list$log_lambda))
             }
+            
+            return(NULL)
         },
         
         #' @description Get parameters from design matrices
