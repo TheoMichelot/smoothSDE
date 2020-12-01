@@ -74,7 +74,7 @@ Type nllk_sde(objective_function<Type>* obj) {
     for(int i = 1; i < n; i ++) {
         // No contribution if first observation of the track
         if(ID(i-1) == ID(i)) {
-            llk = llk + tr_dens<Type>(obs(i, 0), obs(i-1, 0), dtimes(i-1), 
+            llk = llk + tr_dens<Type>(obs.row(i), obs.row(i-1), dtimes(i-1), 
                                       par_mat.row(i-1), true, type, other_data);
         }
     }
