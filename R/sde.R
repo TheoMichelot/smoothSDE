@@ -488,13 +488,24 @@ SDE <- R6Class(
                 # No extra data needed for BM and OU models
                 tmb_dat$other_data <- 0                
             } else if(self$type() == "CTCRW") {
+                # Number of dimensions
+                n_dim <- ncol(self$obs())
                 # Define initial state and covariance for Kalman filter
                 # First index for each ID
                 i0 <- c(1, which(self$data()$ID[-n] != self$data()$ID[-1]) + 1)
-                # Initial state = (x1, 0, y1, 0)
-                tmb_dat$a0 <- cbind(self$obs()[i0, 1], 0, self$obs()[i0,2], 0)
+                # Initial state = (x1, 0, y1, 0, ...)
+                a0 <- matrix(0, length(i0), 2*n_dim)
+                for(i in 1:n_dim) {
+                    a0[, 2*(i-1)+1] <- self$obs()[i0, i]
+                }
+                tmb_dat$a0 <- a0
                 # Initial state covariance
-                tmb_dat$P0 <- diag(c(1, 10, 1, 10))
+                if(is.null(self$other_data()$P0)) {
+                    # Default if P0 not provided by user
+                    tmb_dat$P0 <- diag(rep(c(1, 10), n_dim))                    
+                } else {
+                    tmb_dat$P0 <- self$other_data()$P0
+                }
             } else if(self$type() == "ESEAL_SSM") {
                 # Define initial state and covariance for Kalman filter
                 # Initial state = initial lipid mass

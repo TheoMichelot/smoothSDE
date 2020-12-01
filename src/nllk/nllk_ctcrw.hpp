@@ -8,22 +8,35 @@ using namespace R_inla;
 using namespace density; 
 using namespace Eigen; 
 
+//' Matrix determinant
+template<class Type>
+Type det(matrix<Type> M) {
+    int n_dim = M.cols();
+    Type det = 0;
+    if(n_dim == 1) {
+        det = M(0, 0);
+    } else if(n_dim == 2) {
+        det = M(0,0) * M(1,1) - M(1,0) * M(0,1);        
+    } else {
+        // Use Laplace expansion or TMB::logdet
+    }
+    return det;
+}
+
 //' Make T matrix for Kalman filter
 //' 
 //' @param beta Parameter beta of OU velocity process
 //' @param dt Length of time interval
+//' @param n_dim Number of dimensions of CTCRW process
 template<class Type>
-matrix<Type> makeT_ctcrw(Type beta, Type dt) {
-    matrix<Type> T(4,4);
+matrix<Type> makeT_ctcrw(Type beta, Type dt, int n_dim) {
+    matrix<Type> T(2*n_dim, 2*n_dim);
     T.setZero();
-    
-    T(0,0) = 1;
-    T(2,2) = 1;
-    T(0,1) = (1-exp(-beta*dt))/beta;
-    T(1,1) = exp(-beta*dt);
-    T(2,3) = (1-exp(-beta*dt))/beta;
-    T(3,3) = exp(-beta*dt);
-    
+    for(int i = 0; i < n_dim; i++) {
+        T(2*i, 2*i) = 1;
+        T(2*i, 2*i + 1) = (1-exp(-beta*dt))/beta;
+        T(2*i + 1, 2*i + 1) = exp(-beta*dt);
+    }
     return T;
 }
 
@@ -32,23 +45,18 @@ matrix<Type> makeT_ctcrw(Type beta, Type dt) {
 //' @param beta Parameter beta of OU velocity process
 //' @param sigma Parameter sigma of OU velocity process
 //' @param dt Length of time interval
+//' @param n_dim Number of dimensions of CTCRW process
 template<class Type>
-matrix<Type> makeQ_ctcrw(Type beta, Type sigma, Type dt) {
-    matrix<Type> Q(4,4);
+matrix<Type> makeQ_ctcrw(Type beta, Type sigma, Type dt, int n_dim) {
+    matrix<Type> Q(2*n_dim, 2*n_dim);
     Q.setZero();
-    
-    Q(0,0) = (sigma/beta)*(sigma/beta)*(dt - 2/beta*(1-exp(-beta*dt)) + 
-        1/(2*beta)*(1-exp(-2*beta*dt)));
-    Q(1,1) = sigma*sigma/(2*beta) * (1-exp(-2*beta*dt));
-    Q(0,1) = sigma*sigma/(2*beta*beta) * (1 - 2*exp(-beta*dt) + exp(-2*beta*dt));
-    Q(1,0) = Q(0,1);
-    
-    Q(2,2) = (sigma/beta)*(sigma/beta)*(dt - 2/beta*(1-exp(-beta*dt)) + 
-        1/(2*beta)*(1-exp(-2*beta*dt)));
-    Q(3,3) = sigma*sigma/(2*beta) * (1-exp(-2*beta*dt));
-    Q(2,3) = sigma*sigma/(2*beta*beta) * (1 - 2*exp(-beta*dt) + exp(-2*beta*dt));
-    Q(3,2) = Q(2,3);
-    
+    for(int i = 0; i < n_dim; i++) {
+        Q(2*i, 2*i) = (sigma/beta)*(sigma/beta)*(dt - 2/beta*(1-exp(-beta*dt)) + 
+            1/(2*beta)*(1-exp(-2*beta*dt)));
+        Q(2*i, 2*i + 1) = sigma*sigma/(2*beta*beta) * (1 - 2*exp(-beta*dt) + exp(-2*beta*dt));
+        Q(2*i + 1, 2*i) = Q(2*i, 2*i + 1);
+        Q(2*i + 1, 2*i + 1) = sigma*sigma/(2*beta) * (1-exp(-2*beta*dt));
+    }
     return Q;
 }
 
@@ -56,6 +64,11 @@ matrix<Type> makeQ_ctcrw(Type beta, Type sigma, Type dt) {
 //' 
 //' This function was inspired by the source code of the package
 //' crawl, authored by Devin Johnson and Josh London
+//' 
+//' All derivations, including for the matrices T and Q defined above, are detailed 
+//' in Section 6.2.2 of Michelot (2019), Stochastic models of animal movement and 
+//' habitat selection. PhD thesis, University of Sheffield.
+//' (etheses.whiterose.ac.uk/23688/1/TheoMichelot_PhD_thesis_April2019.pdf)
 template <class Type>
 Type nllk_ctcrw(objective_function<Type>* obj) {
     //======//
@@ -73,6 +86,9 @@ Type nllk_ctcrw(objective_function<Type>* obj) {
     
     // Number of observations
     int n = obs.rows();
+    
+    // Number of dimensions
+    int n_dim = obs.cols();
     
     // Time intervals (needs to be of length n)
     vector<Type> dtimes(n);
@@ -104,29 +120,30 @@ Type nllk_ctcrw(objective_function<Type>* obj) {
     // Likelihood using Kalman filter //
     //================================//
     // Define all matrices and vectors needed below
-    matrix<Type> Z(2, 4);
+    matrix<Type> Z(n_dim, 2*n_dim);
     Z.setZero();
-    Z(0,0) = 1;
-    Z(1,2) = 1;
-    matrix<Type> H(2,2);
+    for(int i = 0; i < n_dim; i++) {
+        Z(i, 2*i) = 1;
+    }
+    matrix<Type> H(n_dim, n_dim);
     H.setZero(); // for now, no measurement error
-    matrix<Type> T(4,4);
-    matrix<Type> Q(4,4);
-    matrix<Type> F(2,2);
+    matrix<Type> T(2*n_dim, 2*n_dim);
+    matrix<Type> Q(2*n_dim, 2*n_dim);
+    matrix<Type> F(n_dim, n_dim);
     F.setZero();
-    matrix<Type> K(4,2);
+    matrix<Type> K(2*n_dim, n_dim);
     K.setZero();
-    matrix<Type> L(4,4);
+    matrix<Type> L(2*n_dim, 2*n_dim);
     L.setZero();
-    vector<Type> u(2);
+    vector<Type> u(n_dim);
     u.setZero();
     Type detF;
     
     // Initial state mean
-    vector<Type> aest(4);
+    vector<Type> aest(2*n_dim);
     aest = a0.row(0);
     // Initial state covariance matrix
-    matrix<Type> Pest(4,4);
+    matrix<Type> Pest(2*n_dim, 2*n_dim);
     Pest = P0;
     
     // Counter for ID (to initialise a0)
@@ -142,8 +159,8 @@ Type nllk_ctcrw(objective_function<Type>* obj) {
             Pest = P0;
         } else {
             // Compute Kalman filter matrices
-            matrix<Type> T = makeT_ctcrw(beta(i), dtimes(i));
-            matrix<Type> Q = makeQ_ctcrw(beta(i), sigma(i), dtimes(i));
+            matrix<Type> T = makeT_ctcrw(beta(i), dtimes(i), n_dim);
+            matrix<Type> Q = makeQ_ctcrw(beta(i), sigma(i), dtimes(i), n_dim);
             
             if(R_IsNA(asDouble(obs(i,0)))) {
                 // If missing observation
@@ -155,16 +172,16 @@ Type nllk_ctcrw(objective_function<Type>* obj) {
                 u = obsrow - Z * aest;
                 // Residual covariance
                 F = Z * Pest * Z.transpose() + H;
-                detF = F(0,0) * F(1,1) - F(1,0) * F(0,1);
+                detF = det(F);
                 
-                if(detF<=0) {
+                if(detF <= 0) {
                     aest = T * aest;
                     Pest = T * Pest * T.transpose() + Q;
                 } else {
                     // Update log-likelihood
                     matrix<Type> FinvT = F.inverse().transpose();
                     vector<Type> FinvTu = FinvT * u;
-                    Type uFu = u(0) * FinvTu(0) + u(1) * FinvTu(1);
+                    Type uFu = (u * FinvTu).sum();
                     llk = llk - (log(detF) + uFu)/2;
                     // Kalman gain
                     K = T * Pest * Z.transpose() * F.inverse();
