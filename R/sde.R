@@ -320,8 +320,7 @@ SDE <- R6Class(
             names_fe <- NULL
             names_re <- NULL
             names_ncol_re <- NULL
-            k <- 1
-            
+
             # Loop over formulas
             for(j in seq_along(self$formulas())) {
                 form <- self$formulas()[[j]]
@@ -345,19 +344,19 @@ SDE <- R6Class(
                 }
                 
                 # Fixed effects design matrix
-                X_list_fe[[k]] <- Xmat[, 1:gam_setup$nsdf, drop = FALSE]
+                X_list_fe[[j]] <- Xmat[, 1:gam_setup$nsdf, drop = FALSE]
                 subnames_fe <- paste0(par_name, ".", term_names[1:gam_setup$nsdf])
                 names_fe <- c(names_fe, subnames_fe)
                 
                 # Random effects design matrix
-                X_list_re[[k]] <- Xmat[, -(1:gam_setup$nsdf), drop = FALSE]
-                if(ncol(X_list_re[[k]]) > 0) {
+                X_list_re[[j]] <- Xmat[, -(1:gam_setup$nsdf), drop = FALSE]
+                if(ncol(X_list_re[[j]]) > 0) {
                     subnames_re <- paste0(par_name, ".", term_names[-(1:gam_setup$nsdf)])
                     names_re <- c(names_re, subnames_re)                    
                 }
                 
                 # Smoothing matrix
-                S_list[[k]] <- bdiag_check(gam_setup$S)
+                S_list[[j]] <- bdiag_check(gam_setup$S)
                 
                 # Number of columns for fixed effects
                 ncol_fe <- c(ncol_fe, gam_setup$nsdf)
@@ -373,8 +372,6 @@ SDE <- R6Class(
                     s_terms <- gsub("(.*)\\..*", "\\1", subnames_re[s_terms_i1])
                     names_ncol_re <- c(names_ncol_re, s_terms)
                 }
-                
-                k <- k + 1
             }
             
             # Store as block diagonal matrices
