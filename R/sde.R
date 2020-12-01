@@ -34,21 +34,25 @@ SDE <- R6Class(
                 stop("'response' not found in 'data'")
             
             # Link functions for SDE parameters
+            n_dim <- length(response)
             link <- switch (type,
                             "BM" = list(mu = identity, sigma = log),
                             "BM-t" = list(mu = identity, sigma = log),
-                            "OU" = list(mu = identity, beta = log, sigma = log),
+                            "OU" = as.list(c(mu = lapply(1:n_dim, function(i) identity), 
+                                             beta = log, sigma = log)),
                             "CTCRW" = list(beta = log, sigma = log),
                             "ESEAL_SSM" = list(mu = identity, sigma = log))
-            private$link_ <- link
             
             # Inverse link functions for SDE parameters
             invlink <- switch (type,
                                "BM" = list(mu = identity, sigma = exp),
                                "BM-t" = list(mu = identity, sigma = exp),
-                               "OU" = list(mu = identity, beta = exp, sigma = exp),
+                               "OU" = as.list(c(mu = lapply(1:n_dim, function(i) identity), 
+                                              beta = exp, sigma = exp)),
                                "CTCRW" = list(beta = exp, sigma = exp),
                                "ESEAL_SSM" = list(mu = identity, sigma = exp))
+
+            private$link_ <- link
             private$invlink_ <- invlink
             
             # Check that "formulas" is of the right length and with right names
