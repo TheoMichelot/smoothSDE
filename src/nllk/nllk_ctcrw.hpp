@@ -18,7 +18,7 @@ Type det(matrix<Type> M) {
     } else if(n_dim == 2) {
         det = M(0,0) * M(1,1) - M(1,0) * M(0,1);        
     } else {
-        // Use Laplace expansion or TMB::logdet
+        det = exp(atomic::logdet(M));
     }
     return det;
 }
