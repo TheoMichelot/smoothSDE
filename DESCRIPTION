@@ -10,4 +10,4 @@ License: GPL-3
 Encoding: UTF-8
 Depends: R6, mgcv, TMB, RcppEigen, Matrix, ggplot2, MASS
 LinkingTo: TMB, RcppEigen
-RoxygenNote: 7.1.0
+RoxygenNote: 7.1.1

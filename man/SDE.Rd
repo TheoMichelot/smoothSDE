@@ -15,6 +15,15 @@ This function transforms the smoothness parameter of
 each smooth term into a standard deviation, given by 
 SD = 1/sqrt(lambda). It is particularly helpful to get the
 standard deviations of independent normal random effects.
+
+This method generates confidence intervals by simulation.
+That is, it generates \code{n_post} posterior samples of 
+the estimated parameters from a multivariate normal distribution,
+where the mean is the vector of estimates and the covariance matrix 
+is provided by TMB. Then, transition probabilities are derived for 
+each set of posterior parameter values, and confidence intervals
+are obtained as quantiles of the posterior simulated transition
+probabilities.
 }
 \section{Methods}{
 \subsection{Public methods}{
@@ -25,6 +34,7 @@ standard deviations of independent normal random effects.
 \item \href{#method-type}{\code{SDE$type()}}
 \item \href{#method-response}{\code{SDE$response()}}
 \item \href{#method-fixpar}{\code{SDE$fixpar()}}
+\item \href{#method-other_data}{\code{SDE$other_data()}}
 \item \href{#method-link}{\code{SDE$link()}}
 \item \href{#method-invlink}{\code{SDE$invlink()}}
 \item \href{#method-coeff_fe}{\code{SDE$coeff_fe()}}
@@ -32,7 +42,7 @@ standard deviations of independent normal random effects.
 \item \href{#method-lambda}{\code{SDE$lambda()}}
 \item \href{#method-vcomp}{\code{SDE$vcomp()}}
 \item \href{#method-terms}{\code{SDE$terms()}}
-\item \href{#method-res}{\code{SDE$res()}}
+\item \href{#method-out}{\code{SDE$out()}}
 \item \href{#method-tmb_obj}{\code{SDE$tmb_obj()}}
 \item \href{#method-tmb_rep}{\code{SDE$tmb_rep()}}
 \item \href{#method-obs}{\code{SDE$obs()}}
@@ -48,8 +58,11 @@ standard deviations of independent normal random effects.
 \item \href{#method-fit}{\code{SDE$fit()}}
 \item \href{#method-par_all}{\code{SDE$par_all()}}
 \item \href{#method-post}{\code{SDE$post()}}
+\item \href{#method-CI}{\code{SDE$CI()}}
+\item \href{#method-predict_par}{\code{SDE$predict_par()}}
 \item \href{#method-residuals}{\code{SDE$residuals()}}
 \item \href{#method-AIC}{\code{SDE$AIC()}}
+\item \href{#method-simulate}{\code{SDE$simulate()}}
 \item \href{#method-plot_par}{\code{SDE$plot_par()}}
 \item \href{#method-clone}{\code{SDE$clone()}}
 }
@@ -60,7 +73,15 @@ standard deviations of independent normal random effects.
 \subsection{Method \code{new()}}{
 Create a SDE object
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{SDE$new(formulas, data, type, response, par0 = NULL, fixpar = NULL)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{SDE$new(
+  formulas,
+  data,
+  type,
+  response,
+  par0 = NULL,
+  fixpar = NULL,
+  other_data = NULL
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -78,6 +99,9 @@ time, and ID}
 \item{\code{par0}}{Vector of initial values for SDE parameters}
 
 \item{\code{fixpar}}{Vector of names of fixed SDE parameters}
+
+\item{\code{other_data}}{Named list of data objects to pass to
+likelihood}
 }
 \if{html}{\out{</div>}}
 }
@@ -132,6 +156,16 @@ Name(s) of response variable(s)
 Name(s) of fixed parameter(s)
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{SDE$fixpar()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-other_data"></a>}}
+\if{latex}{\out{\hypertarget{method-other_data}{}}}
+\subsection{Method \code{other_data()}}{
+Named list of additional data objects
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{SDE$other_data()}\if{html}{\out{</div>}}
 }
 
 }
@@ -206,12 +240,12 @@ Terms of model formulas
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-res"></a>}}
-\if{latex}{\out{\hypertarget{method-res}{}}}
-\subsection{Method \code{res()}}{
+\if{html}{\out{<a id="method-out"></a>}}
+\if{latex}{\out{\hypertarget{method-out}{}}}
+\subsection{Method \code{out()}}{
 Output of optimiser after model fitting
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{SDE$res()}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{SDE$out()}\if{html}{\out{</div>}}
 }
 
 }
@@ -309,7 +343,7 @@ Update smoothness parameters
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{new_coeff}}{New smoothness parameter vector}
+\item{\code{new_lambda}}{New smoothness parameter vector}
 }
 \if{html}{\out{</div>}}
 }
@@ -328,7 +362,7 @@ Print SDE and parameter formulas
 \if{html}{\out{<a id="method-ind_fixcoeff"></a>}}
 \if{latex}{\out{\hypertarget{method-ind_fixcoeff}{}}}
 \subsection{Method \code{ind_fixcoeff()}}{
-Indices of fixed coefficients in coff_fe
+Indices of fixed coefficients in coeff_fe
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{SDE$ind_fixcoeff()}\if{html}{\out{</div>}}
 }
@@ -438,7 +472,7 @@ accessed using the method \code{res}.
 \subsection{Method \code{par_all()}}{
 Get parameters from design matrices
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{SDE$par_all(X_fe, X_re)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{SDE$par_all(X_fe, X_re, coeff_fe = NULL, coeff_re = NULL)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -449,6 +483,10 @@ by \code{make_mat}}
 
 \item{\code{X_re}}{Design matrix for random effects, as returned
 by \code{make_mat}}
+
+\item{\code{coeff_fe}}{Optional vector of fixed effect parameters}
+
+\item{\code{coeff_re}}{Optional vector of random effect parameters}
 }
 \if{html}{\out{</div>}}
 }
@@ -475,6 +513,79 @@ Posterior draws for uncertainty quantification
 \item{\code{n_post}}{Number of posterior draws}
 }
 \if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-CI"></a>}}
+\if{latex}{\out{\hypertarget{method-CI}{}}}
+\subsection{Method \code{CI()}}{
+Confidence intervals for SDE parameters
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{SDE$CI(X_fe, X_re, level = 0.95, n_post = 1000)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{X_fe}}{Design matrix for fixed effects, as returned
+by \code{make_mat}}
+
+\item{\code{X_re}}{Design matrix for random effects, as returned
+by \code{make_mat}}
+
+\item{\code{level}}{Confidence level (default: 0.95 for 95\% confidence 
+intervals)}
+
+\item{\code{n_post}}{Number of posterior samples from which the confidence
+intervals are calculated. Larger values will reduce approximation
+error, but increase computation time. Defaults to 1000.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+List with elements:
+\itemize{
+  \item{\code{low}}{Matrix of lower bounds of confidence intervals.}
+  \item{\code{upp}}{Matrix of upper bounds of confidence intervals.}
+}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-predict_par"></a>}}
+\if{latex}{\out{\hypertarget{method-predict_par}{}}}
+\subsection{Method \code{predict_par()}}{
+Predict SDE parameters
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{SDE$predict_par(new_data = NULL, CI = FALSE, level = 0.95, n_post = 1000)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{new_data}}{Data frame containing covariate values for which the
+SDE parameters should be predicted.}
+
+\item{\code{CI}}{Logical argument: should the function return confidence
+intervals for the parameters? Default: FALSE.}
+
+\item{\code{level}}{Confidence level (default: 0.95 for 95\% confidence 
+intervals) if \code{CI = TRUE}.}
+
+\item{\code{n_post}}{Number of posterior samples from which the confidence
+intervals are calculated if \code{CI = TRUE}. Larger values will reduce 
+approximation error, but increase computation time. Defaults to 1000.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+If \code{CI = FALSE}, returns a matrix of point estimates, 
+where each row corresponds to one row of \code{new_data}. If 
+\code{CI = TRUE}, returns a list with elements:
+\itemize{
+  \item{\code{estimate}}{Matrix of point estimates}
+  \item{\code{low}}{Matrix of lower bounds of confidence intervals}
+  \item{\code{upp}}{Matrix of upper bounds of confidence intervals}
+}
 }
 }
 \if{html}{\out{<hr>}}
@@ -506,6 +617,30 @@ package CTMCdive
 \code{k = 2} is the classical AIC}
 }
 \if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-simulate"></a>}}
+\if{latex}{\out{\hypertarget{method-simulate}{}}}
+\subsection{Method \code{simulate()}}{
+Simulate from SDE model
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{SDE$simulate(data, z0 = 0)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{data}}{Data frame for input data. Should have at least one column 'time' for
+times of observations, and columns for covariates if necessary.}
+
+\item{\code{z0}}{Optional value for first observation of simulated time series.
+Default: 0.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Input data frame with extra column for simulated time series
 }
 }
 \if{html}{\out{<hr>}}

@@ -236,7 +236,7 @@ SDE <- R6Class(
         
         #' @description Update smoothness parameters
         #' 
-        #' @param new_coeff New smoothness parameter vector
+        #' @param new_lambda New smoothness parameter vector
         update_lambda = function(new_lambda) {
             private$lambda_ <- matrix(new_lambda)
             rownames(private$lambda_) <- self$terms()$names_re
@@ -271,7 +271,7 @@ SDE <- R6Class(
             cat("\n")
         },
         
-        #' @description Indices of fixed coefficients in coff_fe
+        #' @description Indices of fixed coefficients in coeff_fe
         ind_fixcoeff = function() {
             # Number of SDE parameters
             n_par <- length(self$formulas())
