@@ -14,6 +14,7 @@ vignette: >
   %\VignetteEngine{knitr::rmarkdown}
 editor_options: 
   chunk_output_type: console
+tables: true
 ---
 
 ```{r setup, include = FALSE}
@@ -35,30 +36,46 @@ The R package smoothSDE implements varying-coefficient versions of several popul
 ## Varying-coefficient stochastic differential equations
 
 Varying-coefficient SDEs, and the inferential method implemented in smoothSDE, are described by @michelot2020. The main model formulations currently implemented in the package are described in the following table.
- 
-| Model                                  | Name        | Parameters |                              | Link functions |
-|----------------------------------------|-------------|------------|------------------------------|----------------|
-| Brownian motion                        | "BM"        | drift      | $\mu \in (-\infty, +\infty)$ | identity       |
-|                                        |             | diffusion  | $\sigma > 0$                 | log            |
-| Ornstein-Uhlenbeck process             | "OU"        | mean       | $\mu \in (-\infty, +\infty)$ | identity       |
-|                                        |             | reversion  | $\beta > 0$                  | log            |
-|                                        |             | diffusion  | $\sigma > 0$                 | log            |
-| Continuous-time correlated random walk | "CTCRW"     | reversion  | $\beta > 0$                  | log            |
-|                                        |             | diffusion  | $\sigma > 0$                 | log            |
 
-Brownian motion and the Ornstein-Uhlenbeck process have a wide range of applications (e.g., ecology, finance), and the continuous-time correlated random walk is a popular model of animal movement described by @johnson2008.
+\begin{tabular}{lllll}
+\toprule
+Model                                  & Name    & Parameters &                              & Link functions \\
+\midrule
+Brownian motion                        & "BM"    & drift      & $\mu \in (-\infty, +\infty)$ & identity \\
+                                       &         & diffusion  & $\sigma > 0$                 & log \\
+\midrule
+Ornstein-Uhlenbeck process             & "OU"    & mean       & $\mu \in (-\infty, +\infty)$ & identity \\
+                                       &         & reversion  & $\beta > 0$                  & log \\
+                                       &         & diffusion  & $\sigma > 0$                 & log \\
+\midrule
+Continuous-time correlated random walk & "CTCRW" & reversion  & $\beta > 0$                  & log \\
+                                       &         & diffusion  & $\sigma > 0$                 & log \\
+\bottomrule
+\end{tabular}
+
+<!-- | Model                                  | Name        | Parameters |                              | Link functions | -->
+<!-- |----------------------------------------|-------------|------------|------------------------------|----------------| -->
+<!-- | Brownian motion                        | "BM"        | drift      | $\mu \in (-\infty, +\infty)$ | identity       | -->
+<!-- |                                        |             | diffusion  | $\sigma > 0$                 | log            | -->
+<!-- | Ornstein-Uhlenbeck process             | "OU"        | mean       | $\mu \in (-\infty, +\infty)$ | identity       | -->
+<!-- |                                        |             | reversion  | $\beta > 0$                  | log            | -->
+<!-- |                                        |             | diffusion  | $\sigma > 0$                 | log            | -->
+<!-- | Continuous-time correlated random walk | "CTCRW"     | reversion  | $\beta > 0$                  | log            | -->
+<!-- |                                        |             | diffusion  | $\sigma > 0$                 | log            | -->
+
+Brownian motion and the Ornstein-Uhlenbeck process have a wide range of applications (e.g., ecology, finance), and the continuous-time correlated random walk is a popular model of animal movement described by @johnson2008. The package supports multivariate isotropic processes, i.e., with the same set of parameters describing the dynamics in each dimension. 
 
 ## SDE class
 
 The package is centred around the R6 class _SDE_, which encapsulates the model formulas and the data for a varying-coefficient SDE model. The constructor SDE\$new can be used to create a model object, and its main arguments are:
 
- - formulas: List of formulas for the parameters of the SDE. The formulas can include terms from standard R expressions, as well as smooth terms and random effects from the mgcv package (@wood2017).
+- formulas: List of formulas for the parameters of the SDE. The formulas can include terms from standard R expressions, as well as smooth terms and random effects from the mgcv package (@wood2017).
 
- - data: Data frame with columns for the response variable, for the covariate, for ID, and for time.
+- data: Data frame with columns for the response variable, for the covariate, for ID, and for time.
 
- - type: Type of SDE; options are "BM" (Brownian motion), "OU" (Ornstein-Uhlenbeck), "CTCRW" (continuous-time correlated random walk).
+- type: Type of SDE; options are "BM" (Brownian motion), "OU" (Ornstein-Uhlenbeck), "CTCRW" (continuous-time correlated random walk).
 
- - response: Name of response variable(s).
+- response: Name of response variable(s).
 
 # Example: elephant movement analysis
 
@@ -81,7 +98,7 @@ track <- subset(raw_cols, ID == unique(ID)[1])
 dates <- as.POSIXlt(track$date, tz = "GMT")
 times <- as.numeric(dates - min(dates))/3600
 keep_rows <- which(dates > as.POSIXct("2009-05-01 00:00:00") & 
-                       dates < as.POSIXct("2009-09-30 23:59:59"))
+                     dates < as.POSIXct("2009-09-30 23:59:59"))
 track <- track[keep_rows,]
 dates <- dates[keep_rows]
 times <- times[keep_rows]
@@ -93,14 +110,14 @@ track$y <- track$y/1000
 
 We create a data frame that includes columns for
 
- - time series identifier "ID". This is required when fitting the model to several time series, treated as independent realisations of the same underlying process. Here, we only have one time series, so all rows have the same ID.
- 
- - responses "x" and "y". Here, there are two response variables because the CTCRW model works in two dimensions (Easting and Northing). For other models, such as Brownian motion and Ornstein-Uhlenbeck process, only one response variable is expected.
+- time series identifier "ID". This is required when fitting the model to several time series, treated as independent realisations of the same underlying process. Here, we only have one time series, so all rows have the same ID.
 
- - covariate "temp". We will later estimate the effect of this covariate on the parameters of the elephant's velocity process.
- 
- - time. This should be a numeric column for time, used to compute time intervals between observations.
- 
+- responses "x" and "y". Here, there are two response variables because the CTCRW model works in two dimensions (Easting and Northing). For other models, such as Brownian motion and Ornstein-Uhlenbeck process, only one response variable is expected.
+
+- covariate "temp". We will later estimate the effect of this covariate on the parameters of the elephant's velocity process.
+
+- time. This should be a numeric column for time, used to compute time intervals between observations.
+
 ```{r example-data}
 data <- data.frame(ID = 1, 
                    x = track$x, 
@@ -157,8 +174,8 @@ par
 
 # To-do list
 
- - Non-zero mean velocity in CTCRW model
-    
- - Implement decaying-response model
-    
+- Non-zero mean velocity in CTCRW model
+
+- Implement decaying-response model
+
 # References
