@@ -19,7 +19,7 @@ editor_options:
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(
   message = FALSE, error = FALSE, warning = FALSE,
-  comment = NA
+  comment = NA, cache = TRUE
 )
 ```
 
@@ -157,12 +157,8 @@ par
 
 # To-do list
 
-    - Non-zero mean velocity in CTCRW model
+ - Non-zero mean velocity in CTCRW model
     
-    - Two-dimensional OU process
-    
-    - One-dimensional CTCRW process
-    
-    - Implement decaying-response model
+ - Implement decaying-response model
     
 # References
