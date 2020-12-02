@@ -4,7 +4,17 @@
 
 //' Transition density for a few basic diffusion processes
 //' 
-//' Z1 and Z0 are vectors to allow for multivariate observations
+//' @param Z1 Vector of observations at time t_{i+1}
+//' @param Z0 Vector of observations at time t_i
+//' @param dtimes Time interval = t_{i+1} - t_i
+//' @param par Vector of SDE parameters on working scale (transformed to
+//' natural scale within this function)
+//' @param give_log Logical. Should the log-density be returned?
+//' @param type String for model type ("BM", "BM-t" or "OU")
+//' @param other_data Vector for any additional data needed; e.g., the number
+//' of degrees of freedom for BM-t
+//' 
+//' @return Transition density from Z0 to Z1
 template<class Type>
 Type tr_dens(vector<Type> Z1, vector<Type> Z0, Type dtimes, vector<Type> par, 
              bool give_log, std::string type, vector<Type> other_data) {
@@ -17,7 +27,6 @@ Type tr_dens(vector<Type> Z1, vector<Type> Z0, Type dtimes, vector<Type> par,
     
     // Loop over dimensions to add contribution of each
     for(int i = 0; i < n_dim; i++) {
-        
         if(type == "BM") {
             // Brownian motion: dZ_t = mu(t) dt + sigma(t) dW_t
             // where par = (mu, log(sigma))
