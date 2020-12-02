@@ -775,7 +775,7 @@ SDE <- R6Class(
         #' }
         predict_par = function(new_data = NULL, CI = FALSE, level = 0.95, n_post = 1e3) {
             # Are there covariates in the observation process model?
-            nocovs <- all(self$formulas() == as.formula("~1"))
+            nocovs <- all(sapply(self$formulas(), function(f) f == ~1))
             
             # Check that new_data is provided if necessary, else create dummy dataframe
             if(is.null(new_data)) {
