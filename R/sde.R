@@ -48,10 +48,10 @@ SDE <- R6Class(
                                "BM" = list(mu = identity, sigma = exp),
                                "BM-t" = list(mu = identity, sigma = exp),
                                "OU" = as.list(c(mu = lapply(1:n_dim, function(i) identity), 
-                                              beta = exp, sigma = exp)),
+                                                beta = exp, sigma = exp)),
                                "CTCRW" = list(beta = exp, sigma = exp),
                                "ESEAL_SSM" = list(mu = identity, sigma = exp))
-
+            
             private$link_ <- link
             private$invlink_ <- invlink
             
@@ -324,7 +324,7 @@ SDE <- R6Class(
             names_fe <- NULL
             names_re <- NULL
             names_ncol_re <- NULL
-
+            
             # Loop over formulas
             for(j in seq_along(self$formulas())) {
                 form <- self$formulas()[[j]]
@@ -640,11 +640,11 @@ SDE <- R6Class(
             if(!is.null(rep$jointPrecision)) {
                 jointCov <- try(as.matrix(solve(rep$jointPrecision)), silent = TRUE)
                 if(inherits(jointCov, "try-error")) {
-                    message <- jointCov[1]
+                    message <- attr(jointCov, 'condition')$message
                     jointCov <- ginv(as.matrix(rep$jointPrecision))
-                    warning(paste0("Inversion of precision matrix using 'solve' failed with ",
-                    "following message; using 'MASS::ginv' instead (uncertainty estimates may ",
-                    "be unreliable).\n", message))
+                    warning(paste0("Inversion of precision matrix using 'solve' failed: ", 
+                                   message, ". Using 'MASS::ginv' instead (uncertainty ",
+                                   "estimates may be unreliable)."))
                 }
                 colnames(jointCov) <- colnames(rep$jointPrecision)
                 rownames(jointCov) <- colnames(jointCov)
