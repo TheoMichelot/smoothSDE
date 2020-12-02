@@ -172,10 +172,4 @@ par <- my_sde$predict_par(new_data = new_data, CI = TRUE)
 par
 ```
 
-# To-do list
-
-- Non-zero mean velocity in CTCRW model
-
-- Implement decaying-response model
-
 # References
