@@ -1,5 +1,5 @@
 ---
-title: "smoothSDE vignette"
+title: "**smoothSDE vignette**"
 author: "Théo Michelot"
 date: "`r Sys.Date()`"
 output:
@@ -26,7 +26,12 @@ knitr::opts_chunk$set(
 
 ```{r load-package, echo = FALSE}
 library(smoothSDE)
+library(ggplot2)
 set.seed(342)
+
+theme_set(
+  theme_minimal()
+)
 ```
 
 The R package smoothSDE implements varying-coefficient versions of several popular stochastic differential equations (SDEs). It can be used to estimate linear or non-linear relationships between SDE parameters and time-varying covariates. It also provides functions for model visualisation, uncertainty estimation, and residual analysis.
@@ -67,15 +72,145 @@ Brownian motion and the Ornstein-Uhlenbeck process have a wide range of applicat
 
 ## SDE class
 
-The package is centred around the R6 class _SDE_, which encapsulates the model formulas and the data for a varying-coefficient SDE model. The constructor SDE\$new can be used to create a model object, and its main arguments are:
+The package is centred around the R6 class `SDE`, which encapsulates the model formulas and the data for a varying-coefficient SDE model. The constructor `SDE$new` can be used to create a model object, and its main arguments are:
 
-- formulas: List of formulas for the parameters of the SDE. The formulas can include terms from standard R expressions, as well as smooth terms and random effects from the mgcv package (@wood2017).
+- `formulas`: List of formulas for the parameters of the SDE. The formulas can include terms from standard R expressions, as well as smooth terms and random effects from the mgcv package (@wood2017).
 
-- data: Data frame with columns for the response variable, for the covariate, for ID, and for time.
+- `data`: Data frame with columns for the response variable, for the covariate, for ID, and for time.
 
-- type: Type of SDE; options are "BM" (Brownian motion), "OU" (Ornstein-Uhlenbeck), "CTCRW" (continuous-time correlated random walk).
+- `type`: Type of SDE; options are "BM" (Brownian motion), "OU" (Ornstein-Uhlenbeck), "CTCRW" (continuous-time correlated random walk).
 
-- response: Name of response variable(s).
+- `response`: Name of response variable(s).
+
+# Example 1: Brownian motion with drift
+
+We illustrate some of the functionalities of the package using simulated data for a varying-coefficient Brownian motion with drift. We first simulate a process with constant drift (`mu`) and time-varying diffusion parameter (`sigma`) over 1000 time steps.
+
+```{r ex1-sim}
+n <- 1000
+times <- 1:n
+mu <- rep(0.1, n)
+sigma <- exp(cos(2*pi*times/500))
+dZ <- rnorm(n - 1, mean = mu[-n], sd = sigma[-n])
+Z <- cumsum(c(0, dZ))
+```
+
+We define a data frame with columns `ID` (identifier for time series segment), `Z` (process of interest), and `time` (times of observation). 
+
+```{r ex1-plot, fig.width = 6, fig.height = 3, out.width="80%", fig.align="center"}
+data <- data.frame(ID = 1,
+                   Z = Z,
+                   time = times)
+
+ggplot(data, aes(time, Z)) + geom_line()
+```
+
+In this example, we are interested in estimating the smooth relationship between the diffusion parameter and time. We specify this dependence using a list of R formulas with one entry for each SDE parameter. Here, the diffusion parameter sigma is modelled with a thin-plate regression spline basis with 10 knots, using the mgcv syntax.
+
+```{r ex1-formulas}
+formulas <- list(mu = ~1, 
+                 sigma = ~ s(time, k = 10, bs = "ts"))
+```
+
+We create an SDE object that encapsulates the formulas, the data, the type of model (here, Brownian motion), and the name of the response variable (here, `Z`). Then, we can fit the model using the method `fit`.
+
+```{r ex1-fit}                 
+bm <- SDE$new(formulas = formulas,
+               data = data,
+               type = "BM", 
+               response = "Z")
+
+bm$fit()
+```
+
+Once the model is fitted, we can visualise the relationship between the SDE parameters and the covariates with `plot_par`. The option `n_post` can be used to visualise uncertainty with posterior samples.
+
+```{r ex1-plot-par, fig.width = 8, fig.height = 3, out.width="100%"}
+bm$plot_par("time", n_post = 100)
+```
+
+The smoothing splines captured the oscillating patterns in the diffusion parameter, and the drift parameter was slightly underestimated. We can also evaluate the SDE parameters on a grid of covariate values, to compare directly to the true parameters.
+
+```{r ex1-par, fig.width = 6, fig.height = 3, out.width="90%", fig.align = "center"}
+bm_par <- bm$predict_par(new_data = data)
+bm_par_df <- data.frame(time = times,
+                        sigma = c(sigma, bm_par[, "sigma"]),
+                        type = rep(c("true", "estimated"), each = n))
+
+ggplot(bm_par_df, aes(time, sigma, col = type)) +
+  scale_color_manual(values = c("firebrick", "royalblue"), name = "") +
+  geom_line(size = 1)
+```
+
+# Example 2: Ornstein-Uhlenbeck
+
+We present a second simulated example, based on a varying-coefficient Ornstein-Uhlenbeck (OU) process. We generate 1000 observations from a 2-dimensional isotropic OU process with constant mean (`mu`), constant mean reversion (`beta`), and time-varying diffusion (`sigma`). In this example, the parameters are selected such that the diffusion (and therefore the variance of the process around its mean) decreases in time.
+
+```{r ex2-sim, fig.width = 6, fig.height = 3, out.width="80%", fig.align = "center"}
+# Mean parameter (centre of attraction)
+mu <- matrix(rep(c(5, -5), each = n), ncol = 2)
+# Mean reversion parameter
+beta <- rep(0.5, n)
+# Time-varying diffusion parameter
+sigma <- plogis(-(times-500)/100)
+
+# Simulate OU process over 1000 time steps
+Z <- mu
+for(i in 2:n) {
+    mean <- exp(-beta[i-1]) * Z[i-1,] + (1 - exp(-beta[i-1])) * mu[i-1,]
+    sd <- sigma[i-1] / sqrt(2*beta[i-1]) * sqrt(1 - exp(-2 * beta[i-1]))
+    Z[i,] <- rnorm(2, mean, sd)
+}
+
+# Create data frame for smoothSDE
+data <- data.frame(ID = 1,
+                   Z1 = Z[,1],
+                   Z2 = Z[,2],
+                   time = times)
+
+# Plot simulated data, coloured by time
+ggplot(data, aes(Z1, Z2, col = time)) + 
+    geom_path() + 
+    coord_equal() +
+    scale_color_viridis_c()
+```
+
+Like in the previous example, we specify the model for the OU parameters with a list of formulas. There are four parameters: `mu1` (mean in first dimension), `mu2` (mean in second dimension), `beta` (mean reversion) and `sigma` (diffusion). In this example, we assume that the mean parameter is known, and we therefore use the option `fixpar = c("mu1", "mu2")` to indicate that it should not be estimated, and we add the argument `par0` to give the known mean parameter (and initial values for the other parameters). We pass a vector of length 2 for `response`, to indicate that we want to model the two variables with a 2-dimensional isotropic OU process.
+
+```{r ex2-fit}
+formulas <- list(mu1 = ~1,
+                 mu2 = ~1,
+                 beta = ~1,
+                 sigma = ~s(time, k = 10, bs = "ts"))
+
+par0 <- c(mu1 = 5, mu2 = -5, beta = 1, sigma = 3)
+
+ou <- SDE$new(formulas = formulas, 
+              data = data, 
+              type = "OU", 
+              response = c("Z1", "Z2"), 
+              par0 = par0,
+              fixpar = c("mu1", "mu2"))
+
+ou$fit()
+```
+
+We can visualise the results to check that the estimated parameters correctly captured the true parameters used in the simulation.
+
+```{r ex2-plot, fig.width = 8, fig.height = 3, out.width="100%"}
+ou$plot_par("time", n_post = 100)
+
+ou_par <- ou$predict_par(new_data = data)
+ou_par_df <- data.frame(time = times,
+                        sigma = c(sigma, ou_par[, "sigma"]),
+                        type = rep(c("true", "estimated"), each = n))
+
+ggplot(ou_par_df, aes(time, sigma, col = type)) +
+  scale_color_manual(values = c("firebrick", "royalblue"), name = "") +
+  geom_line(size = 1)
+```
+
+The decreasing diffusion parameter seems to be captured well by the model.
 
 # Example: elephant movement analysis
 
@@ -110,13 +245,13 @@ track$y <- track$y/1000
 
 We create a data frame that includes columns for
 
-- time series identifier "ID". This is required when fitting the model to several time series, treated as independent realisations of the same underlying process. Here, we only have one time series, so all rows have the same ID.
+- time series identifier `ID`. This is required when fitting the model to several time series, treated as independent realisations of the same underlying process. Here, we only have one time series, so all rows have the same ID.
 
-- responses "x" and "y". Here, there are two response variables because the CTCRW model works in two dimensions (Easting and Northing). For other models, such as Brownian motion and Ornstein-Uhlenbeck process, only one response variable is expected.
+- responses `x` and `y`. Here, there are two response variables because we are fitting an isotropic CTCRW model to the two-dimensional observations (Easting and Northing).
 
-- covariate "temp". We will later estimate the effect of this covariate on the parameters of the elephant's velocity process.
+- covariate `temp`. We will later estimate the effect of this covariate on the parameters of the elephant's velocity process.
 
-- time. This should be a numeric column for time, used to compute time intervals between observations.
+- `time`. This should be a numeric column for time, used to compute time intervals between observations.
 
 ```{r example-data}
 data <- data.frame(ID = 1, 
@@ -135,7 +270,6 @@ formulas <- list(beta = ~ s(temp, k = 10, bs = "cs"),
                  sigma = ~ s(temp, k = 10, bs = "cs"))
 ```
 
-
 Finally, we use the constructor of the SDE class to create an object for this model, passing as input the formulas, data, type of model, and name of response variables.
 
 ``` {r example-create}
@@ -145,21 +279,19 @@ my_sde <- SDE$new(formulas = formulas,
                   response = c("x", "y"))
 ```
 
-Once the model has been created, the parameters can be estimated using the method "fit":
+Once the model has been created, the parameters can be estimated using the method `fit`:
 
 ``` {r example-fit}
 my_sde$fit()
 ```
 
-Finally, the relationship between the SDE parameters and the covariates can be plotted with the method "plot_par". The function can also generate posterior samples for the estimated relationship, to visualise uncertainty. Here, we plot the CTCRW parameters as function of temperature, with 100 posterior samples:
+Finally, the relationship between the SDE parameters and the covariates can be plotted with the method `plot_par`. The function can also generate posterior samples for the estimated relationship, to visualise uncertainty. Here, we plot the CTCRW parameters as function of temperature, with 100 posterior samples:
 
 ``` {r example-plot, fig.width = 8, fig.height = 3, out.width="100%", fig.align="center"}
 my_sde$plot_par("temp", n_post = 100)
 ```
 
-As described by @michelot2020, these results suggest that this elephant tended to move less at high temperatures, with a big drop in speed over 40 degrees Celsius.
-
-Estimates and point-wise confidence intervals of the SDE parameters can also be computed for given covariate values, using the predict_par method.
+As described by @michelot2020, these results suggest that this elephant tended to move less at high temperatures, with a big drop in speed over 40 degrees Celsius. Estimates and point-wise confidence intervals of the SDE parameters can also be computed for given covariate values, using the `predict_par` method.
 
 ``` {r example-predict}
 # Data frame with covariate values for prediction
