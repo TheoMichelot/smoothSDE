@@ -1,2 +1,3 @@
-useDynLib(smooth_sde)
+useDynLib(smooth_sde, .registration = TRUE)
 exportPattern("^[[:alpha:]]+")
+S3method(logLik, SDE)

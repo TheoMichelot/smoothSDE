@@ -90,25 +90,24 @@ cov_grid <- function(var, data, covs = NULL, formulas) {
     return(new_data)
 }
 
-#' EDF for smooth terms = trace(F)
+#' Compute effective degrees of freedom for a smooth term (i.e., GAM)
 #'
 #' This function is adapted from Dave Miller's code in the
 #' package CTMCdive
 #'
 #' @param X_re Design matrix for random effects 
 #' @param S Smoothing matrix 
-#' @param lambda Smoothing parameter 
-#' @param ncol_re Number of columns of S for each random effect
+#' @param lambda Smoothing parameter
 #'
 #' @return Trace of F = (Xt X + sp*S)^-1 Xt X
-edf <- function(X_re, S, lambda, ncol_re) {
+edf_smooth <- function(X_re, S, lambda) {
     # EDF = 0 if no smooth term
     if(length(lambda) == 0) {
         return(0)
     }
     
     # Duplicate lambda enough times
-    lambda <- rep(lambda, ncol_re)
+    lambda <- rep(lambda, nrow(S))
     
     # Calculate lambda * S
     Sbig <- S * lambda
@@ -120,4 +119,23 @@ edf <- function(X_re, S, lambda, ncol_re) {
     
     # Return the trace
     return(sum(diag(F)))
+}
+
+#' @description logLik function for SDE objects
+#' 
+#' This function makes it possible to call generic R methods such
+#' as AIC and BIC on SDE objects.
+#' 
+#' @param object SDE model object
+#' 
+#' @return Maximum log-likelihood value for the model, with attributes
+#' \code{df} (degrees of freedom) and \code{nobs} (number of observations)
+#' 
+#' @export logLik.SDE
+logLik.SDE <- function(object, ...) {
+    val <- -object$out()$value 
+    attributes(val)$df <- object$edf()
+    attributes(val)$nobs <- nrow(object$data())
+    class(val) <- "logLik"
+    return(val)
 }

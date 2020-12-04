@@ -388,7 +388,8 @@ SDE <- R6Class(
             # Name elements of ncol_re
             names(ncol_re) <- names_ncol_re
             
-            return(list(X_fe = X_fe, X_re = X_re, S = S, 
+            return(list(X_fe = X_fe, X_re = X_re, S = S,
+                        X_list_re = X_list_re, S_list = S_list,
                         ncol_fe = ncol_fe, ncol_re = ncol_re))
         },
         
@@ -851,34 +852,38 @@ SDE <- R6Class(
             return(res)
         },
         
-        #' @description Akaike Information Criterion
+        #' @description Effective degrees of freedom
         #'
         #' This function is adapted from Dave Miller's code in the
-        #' package CTMCdive
-        #'
-        #' @param k Penalty per parameter; the default 
-        #' \code{k = 2} is the classical AIC
-        AIC = function(k = 2) {
-            llk <- - self$out()$value
-            mats <- self$make_mat()
-            
-            # Get effective degrees of freedom for smooths
-            lambda <- self$lambda()
-            edf_re <- edf(X_re = as.matrix(mats$X_re), 
-                          S = as.matrix(mats$S), 
-                          lambda = lambda,
-                          ncol_re = mats$ncol_re)
-            
+        #' package CTMCdive. It is used to compute the AIC and BIC
+        #' of SDE models.
+        edf = function() {
             # Degrees of freedom for fixed effects
-            edf_fe <- length(self$out()$par) - length(lambda)
+            df <- length(self$coeff_fe())
             
-            # Total EDF
-            edf_total <- edf_re + edf_fe
+            # Get model matrices
+            mats <- self$make_mat()
+            S_list <- mats$S_list
+            X_list <- mats$X_list_re
             
-            AIC <- - 2 * llk + k * edf_total
-            return(AIC)
+            # Smoothness parameters
+            lambda <- self$lambda()
+            
+            # Loop over smooth terms to compute EDF
+            edf <- 0
+            k <- 1
+            for(i in seq_along(S_list)) {
+                if(!is.null(S_list[[i]])) {
+                    edf <- edf + edf_smooth(X_re = X_list[[i]], 
+                                            S = S_list[[i]], 
+                                            lambda = lambda[k])
+                    k <- k + 1
+                }
+            }
+            
+            # Return total of fixed + random EDFs
+            return(df + edf)
         },
-        
         
         ################
         ## Simulation ##
