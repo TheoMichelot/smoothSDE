@@ -874,8 +874,16 @@ SDE <- R6Class(
             k <- 1
             for(i in seq_along(S_list)) {
                 if(!is.null(S_list[[i]])) {
+                    X_re <- X_list[[i]]
+                    if(!is.null(self$other_data()$t_decay)) {
+                        # Add effect of decay in X_re if necessary
+                        rho <- exp(self$out()$par["log_decay"])
+                        t_decay <- self$other_data()$t_decay
+                        col_decay <- self$other_data()$col_decay
+                        X_re[,col_decay] <- X_re[,col_decay] * exp(-rho * t_decay)
+                    }
                     # EDF for this smooth
-                    edf <- edf + edf_smooth(X_re = X_list[[i]], 
+                    edf <- edf + edf_smooth(X_re = X_re, 
                                             S = S_list[[i]], 
                                             lambda = lambda[k])
                     k <- k + 1
