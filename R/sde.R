@@ -859,7 +859,7 @@ SDE <- R6Class(
         #' of SDE models.
         edf = function() {
             # Degrees of freedom for fixed effects
-            df <- length(self$coeff_fe())
+            df <- length(self$out()$par) - length(self$lambda())
             
             # Get model matrices
             mats <- self$make_mat()
@@ -874,6 +874,7 @@ SDE <- R6Class(
             k <- 1
             for(i in seq_along(S_list)) {
                 if(!is.null(S_list[[i]])) {
+                    # EDF for this smooth
                     edf <- edf + edf_smooth(X_re = X_list[[i]], 
                                             S = S_list[[i]], 
                                             lambda = lambda[k])
