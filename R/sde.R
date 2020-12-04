@@ -531,6 +531,10 @@ SDE <- R6Class(
             
             # Decaying response model
             if(!is.null(self$other_data()$t_decay)) {
+                if(any(self$other_data()$col_decay > length(self$terms()$names_re_all))) {
+                    stop(paste0("'col_decay' should be between 1 and ", 
+                                length(self$terms()$names_re_all)))
+                }
                 tmb_dat$t_decay <- self$other_data()$t_decay
                 tmb_dat$col_decay <- self$other_data()$col_decay
             } else if(self$type() %in% c("BM", "BM-t", "OU")) {
