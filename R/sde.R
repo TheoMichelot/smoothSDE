@@ -28,7 +28,6 @@ SDE <- R6Class(
             private$type_ <- type
             private$response_ <- response
             private$fixpar_ <- fixpar
-            private$other_data_ <- other_data
             
             if(any(!response %in% colnames(data)))
                 stop("'response' not found in 'data'")
@@ -117,6 +116,14 @@ SDE <- R6Class(
                     self$link()[[i]](par0[i])
                 })
             }
+            
+            # Find columns for decay if necessary
+            if(!is.null(other_data$t_decay) & is.null(other_data$col_decay)) {
+                decay_term <- other_data$decay_term
+                str <- substr(self$terms()$names_re_all, 1, nchar(decay_term))
+                other_data$col_decay <- which(str == decay_term)
+            }
+            private$other_data_ <- other_data
         },
         
         ###############
