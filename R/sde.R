@@ -748,6 +748,9 @@ SDE <- R6Class(
         #' @param X_fe Design matrix (fixed effects)
         #' @param X_re Design matrix (random effects)
         #' @param n_post Number of posterior draws
+        #' 
+        #' @return Array with one row for each time step, one column for
+        #' each SDE parameter, and one layer for each posterior draw
         post_par = function(X_fe, X_re, n_post = 100) {
             # Number of SDE parameters
             n_par <- length(self$formulas())
