@@ -740,8 +740,16 @@ SDE <- R6Class(
             # Generate samples from MVN estimator distribution
             post <- rmvn(n = n_post, mu = par, V = V)
             
-            # Extract coefficients for transition probabilities
-            post_coeff_fe <- post[, which(colnames(post) == "coeff_fe")]
+            # Split up simulated coefficients for fixed and random effects
+            wh_fixed <- self$ind_fixcoeff()
+            if(length(wh_fixed) > 0) {
+                # If any fixed parameter, use fixed value
+                post_coeff_fe <- matrix(NA, nrow = nrow(post), ncol = length(self$coeff_fe()))
+                post_coeff_fe[, -wh_fixed] <- post[, which(colnames(post) == "coeff_fe")]
+                post_coeff_fe[, wh_fixed] <- rep(self$coeff_fe()[wh_fixed], each = n_post)                
+            } else {
+                post_coeff_fe <- post[, which(colnames(post) == "coeff_fe")]
+            }
             post_coeff_re <- post[, which(colnames(post) == "coeff_re")]
             
             # Get SDE parameters over rows of X_fe and X_re, for each 
