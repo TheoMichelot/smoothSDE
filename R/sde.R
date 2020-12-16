@@ -636,6 +636,58 @@ SDE <- R6Class(
             return(par_mat)
         },
         
+        #' @description Extract effect of one term
+        #' 
+        #' This uses fairly naive substring matching using grep, and may not work
+        #' if one covariate's name is a substring of another one.
+        #' 
+        #' @param term Name of term as character string, e.g. "time", 
+        #' or "s(time)"
+        #' @param resp Logical (default: FALSE). If TRUE, return values
+        #' on response scale rather than linear predictor scale.
+        #' @param coeff_fe Optional vector of fixed effect parameters
+        #' @param coeff_re Optional vector of random effect parameters
+        #'
+        #' @return Vector of values of effect of 'term' on SDE parameter
+        #' 'par' over times of observation
+        get_term = function(term, resp = FALSE, coeff_fe = NULL, coeff_re = NULL) {
+            # Make design matrices
+            m <- self$make_mat()
+            X_fe <- m$X_fe
+            X_re <- m$X_re
+            
+            # Names of design matrices 
+            names_fe <- self$terms()$names_fe
+            names_re <- self$terms()$names_re_all
+            
+            # Find indices of coeff_fe and coeff_re that we want to keep
+            # (this is simply done by finding those that have 'term' in their names)
+            wh_keep_fe <- grep(term, names_fe, fixed = TRUE)
+            wh_keep_re <- grep(term, names_re, fixed = TRUE)
+            
+            # By default, use estimated coefficients
+            if(is.null(coeff_fe)) {
+                coeff_fe <- self$coeff_fe()                
+            }
+            if(is.null(coeff_re)) {
+                coeff_re <- self$coeff_re()                
+            }
+            
+            # Create coeff_fe and coeff_re with zeros for terms we're not interested in
+            coeff_fe_term <- rep(0, ncol(X_fe))
+            coeff_fe_term[wh_keep_fe] <- coeff_fe[wh_keep_fe]
+            coeff_re_term <- rep(0, ncol(X_re))
+            coeff_re_term[wh_keep_re] <- coeff_re[wh_keep_re]
+            
+            # Use par_all to get SDE parameters
+            par_mat <- self$par_all(X_fe = X_fe, X_re = X_re,
+                                    coeff_fe = coeff_fe_term, 
+                                    coeff_re = coeff_re_term, 
+                                    resp = resp)
+            
+            return(par_mat)
+        },
+        
         #' @description Posterior draws for uncertainty quantification
         #' 
         #' @param X_fe Design matrix (fixed effects)
