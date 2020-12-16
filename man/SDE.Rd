@@ -57,11 +57,13 @@ probabilities.
 \item \href{#method-setup}{\code{SDE$setup()}}
 \item \href{#method-fit}{\code{SDE$fit()}}
 \item \href{#method-par_all}{\code{SDE$par_all()}}
-\item \href{#method-post}{\code{SDE$post()}}
+\item \href{#method-get_term}{\code{SDE$get_term()}}
+\item \href{#method-post_coeff}{\code{SDE$post_coeff()}}
+\item \href{#method-post_par}{\code{SDE$post_par()}}
 \item \href{#method-CI}{\code{SDE$CI()}}
 \item \href{#method-predict_par}{\code{SDE$predict_par()}}
 \item \href{#method-residuals}{\code{SDE$residuals()}}
-\item \href{#method-AIC}{\code{SDE$AIC()}}
+\item \href{#method-edf}{\code{SDE$edf()}}
 \item \href{#method-simulate}{\code{SDE$simulate()}}
 \item \href{#method-plot_par}{\code{SDE$plot_par()}}
 \item \href{#method-clone}{\code{SDE$clone()}}
@@ -472,7 +474,7 @@ accessed using the method \code{res}.
 \subsection{Method \code{par_all()}}{
 Get parameters from design matrices
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{SDE$par_all(X_fe, X_re, coeff_fe = NULL, coeff_re = NULL)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{SDE$par_all(X_fe, X_re, coeff_fe = NULL, coeff_re = NULL, resp = TRUE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -487,6 +489,10 @@ by \code{make_mat}}
 \item{\code{coeff_fe}}{Optional vector of fixed effect parameters}
 
 \item{\code{coeff_re}}{Optional vector of random effect parameters}
+
+\item{\code{resp}}{Logical (default: TRUE). Should the output be on 
+the response scale? If FALSE, the output is on the linear 
+predictor scale.}
 }
 \if{html}{\out{</div>}}
 }
@@ -495,12 +501,66 @@ Matrix with one column for each parameter
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-post"></a>}}
-\if{latex}{\out{\hypertarget{method-post}{}}}
-\subsection{Method \code{post()}}{
-Posterior draws for uncertainty quantification
+\if{html}{\out{<a id="method-get_term"></a>}}
+\if{latex}{\out{\hypertarget{method-get_term}{}}}
+\subsection{Method \code{get_term()}}{
+Extract effect of one term
+
+This uses fairly naive substring matching using grep, and may not work
+if one covariate's name is a substring of another one.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{SDE$post(X_fe, X_re, n_post = 100)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{SDE$get_term(term, resp = FALSE, coeff_fe = NULL, coeff_re = NULL)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{term}}{Name of term as character string, e.g. "time", 
+or "s(time)"}
+
+\item{\code{resp}}{Logical (default: FALSE). If TRUE, return values
+on response scale rather than linear predictor scale.}
+
+\item{\code{coeff_fe}}{Optional vector of fixed effect parameters}
+
+\item{\code{coeff_re}}{Optional vector of random effect parameters}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Vector of values of effect of 'term' on SDE parameter
+'par' over times of observation
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-post_coeff"></a>}}
+\if{latex}{\out{\hypertarget{method-post_coeff}{}}}
+\subsection{Method \code{post_coeff()}}{
+Posterior draws (coefficients)
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{SDE$post_coeff(n_post)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{n_post}}{Number of posterior draws}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Matrix with one column for each coefficient and one row for each
+posterior draw
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-post_par"></a>}}
+\if{latex}{\out{\hypertarget{method-post_par}{}}}
+\subsection{Method \code{post_par()}}{
+Posterior draws of SDE parameters (for uncertainty 
+quantification)
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{SDE$post_par(X_fe, X_re, n_post = 100)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -513,6 +573,10 @@ Posterior draws for uncertainty quantification
 \item{\code{n_post}}{Number of posterior draws}
 }
 \if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Array with one row for each time step, one column for
+each SDE parameter, and one layer for each posterior draw
 }
 }
 \if{html}{\out{<hr>}}
@@ -599,25 +663,18 @@ Model residuals
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-AIC"></a>}}
-\if{latex}{\out{\hypertarget{method-AIC}{}}}
-\subsection{Method \code{AIC()}}{
-Akaike Information Criterion
+\if{html}{\out{<a id="method-edf"></a>}}
+\if{latex}{\out{\hypertarget{method-edf}{}}}
+\subsection{Method \code{edf()}}{
+Effective degrees of freedom
 
 This function is adapted from Dave Miller's code in the
-package CTMCdive
+package CTMCdive. It is used to compute the AIC and BIC
+of SDE models.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{SDE$AIC(k = 2)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{SDE$edf()}\if{html}{\out{</div>}}
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{k}}{Penalty per parameter; the default 
-\code{k = 2} is the classical AIC}
-}
-\if{html}{\out{</div>}}
-}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-simulate"></a>}}
