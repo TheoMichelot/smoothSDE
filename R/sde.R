@@ -698,22 +698,16 @@ SDE <- R6Class(
             return(par_mat)
         },
         
-        #' @description Posterior draws for uncertainty quantification
+        ################################
+        ## Uncertainty quantification ##
+        ################################
+        #' @description Posterior draws (coefficients)
         #' 
-        #' @param X_fe Design matrix (fixed effects)
-        #' @param X_re Design matrix (random effects)
-        #' @param n_post Number of posterior draws 
-        post = function(X_fe, X_re, n_post = 100) {
-            # Number of SDE parameters
-            n_par <- length(self$formulas())
-            # Number of time steps
-            n <- nrow(X_fe)/n_par
-            # Indices of non-fixed SDE parameters
-            ind_estpar <- which(!names(self$formulas()) %in% self$fixpar())
-            # Indices of estimated coefficients in coeff_fe
-            fe_cols <- rep(1:n_par, self$terms()$ncol_fe)
-            ind_est_fe <- which(fe_cols %in% ind_estpar)
-            
+        #' @param n_post Number of posterior draws
+        #' 
+        #' @return Matrix with one column for each coefficient and one row for each
+        #' posterior draw
+        post_coeff = function(n_post) {
             # TMB report
             rep <- self$tmb_rep()
             
@@ -743,14 +737,37 @@ SDE <- R6Class(
                 stop("Check TMB parameter order (should be fixed first, then random)")
             
             # Posterior draws from MVN(par_all, jointCov)
-            par_post <- rmvn(n = n_post, mu = par_all, V = jointCov)
+            post_coeff <- rmvn(n = n_post, mu = par_all, V = jointCov)
+            
+            return(post_coeff)
+        },
+        
+        #' @description Posterior draws of SDE parameters (for uncertainty 
+        #' quantification)
+        #' 
+        #' @param X_fe Design matrix (fixed effects)
+        #' @param X_re Design matrix (random effects)
+        #' @param n_post Number of posterior draws
+        post_par = function(X_fe, X_re, n_post = 100) {
+            # Number of SDE parameters
+            n_par <- length(self$formulas())
+            # Number of time steps
+            n <- nrow(X_fe)/n_par
+            # Indices of non-fixed SDE parameters
+            ind_estpar <- which(!names(self$formulas()) %in% self$fixpar())
+            # Indices of estimated coefficients in coeff_fe
+            fe_cols <- rep(1:n_par, self$terms()$ncol_fe)
+            ind_est_fe <- which(fe_cols %in% ind_estpar)
+            
+            # Generate posterior draws of coeff_fe and coeff_re
+            post_coeff <- self$post_coeff(n_post = n_post)
             
             # In post_fe, set columns for fixed parameters to fixed value,
             # and use posterior draws for non-fixed parameters
             post_fe <- matrix(rep(self$coeff_fe(), each = n_post), 
                               nrow = n_post, ncol = sum(self$terms()$ncol_fe))
-            post_fe[,ind_est_fe] <- par_post[, which(colnames(par_post) == "coeff_fe")]
-            post_re <- par_post[, which(colnames(par_post) == "coeff_re")]
+            post_fe[,ind_est_fe] <- post_coeff[, which(colnames(post_coeff) == "coeff_fe")]
+            post_re <- post_coeff[, which(colnames(post_coeff) == "coeff_re")]
             lp_post <- X_fe %*% t(post_fe) + X_re %*% t(post_re)
             
             lp_array <- array(lp_post, dim = c(n, n_par, n_post))
@@ -895,6 +912,9 @@ SDE <- R6Class(
             return(preds)
         },
         
+        ####################
+        ## Model checking ##
+        ####################
         #' @description Model residuals
         residuals = function() {
             data <- self$data()
@@ -1067,9 +1087,9 @@ SDE <- R6Class(
             
             # Data frame for posterior draws
             if(n_post > 0) {
-                post <- self$post(X_fe = mats$X_fe, 
-                                  X_re = mats$X_re, 
-                                  n_post = n_post)
+                post <- self$post_par(X_fe = mats$X_fe, 
+                                      X_re = mats$X_re, 
+                                      n_post = n_post)
                 post_df <- as.data.frame.table(post)
                 colnames(post_df) <- c("var", "par", "stratum", "val")
                 
