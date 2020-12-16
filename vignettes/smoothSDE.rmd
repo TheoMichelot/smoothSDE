@@ -142,6 +142,17 @@ ggplot(bm_par_df, aes(time, sigma, col = type)) +
   geom_line(size = 1)
 ```
 
+We can simulate from the fitted model with the method `simulate` (only available for Brownian motion and Ornstein-Uhlenbeck models for now), for example to assess whether the model captures relevant features of the observed data. 
+
+```{r ex1-sim}
+# Pass 'data' to use observed covariates in simulation
+sim <- bm$simulate(data = data)
+
+ggplot(data, aes(time, Z)) + geom_line()
+```
+
+Similarly to the observed time series, the simulated process alternates between periods of low variability (e.g., around $t = 250$ and $t = 750$) and periods of high variability (e.g., around $t = 0$, $t = 500$ and $t = 1000$).
+
 # Example 2: Ornstein-Uhlenbeck
 
 We present a second simulated example, based on a varying-coefficient Ornstein-Uhlenbeck (OU) process. We generate 1000 observations from a 2-dimensional isotropic OU process with constant mean (`mu`), constant mean reversion (`beta`), and time-varying diffusion (`sigma`). In this example, the parameters are selected such that the diffusion (and therefore the variance of the process around its mean) decreases in time.
@@ -212,7 +223,7 @@ ggplot(ou_par_df, aes(time, sigma, col = type)) +
 
 The decreasing diffusion parameter seems to be captured well by the model.
 
-# Example: elephant movement analysis
+# Example 3: elephant movement analysis
 
 The following code can be used to fit the varying-coefficient CTCRW model to elephant GPS data from @wall2014, as described in Section 3.2 of @michelot2020.
 
