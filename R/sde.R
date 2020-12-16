@@ -606,9 +606,12 @@ SDE <- R6Class(
         #' by \code{make_mat}
         #' @param coeff_fe Optional vector of fixed effect parameters
         #' @param coeff_re Optional vector of random effect parameters
+        #' @param resp Logical (default: TRUE). Should the output be on 
+        #' the response scale? If FALSE, the output is on the linear 
+        #' predictor scale.
         #' 
         #' @return Matrix with one column for each parameter
-        par_all = function(X_fe, X_re, coeff_fe = NULL, coeff_re = NULL) {
+        par_all = function(X_fe, X_re, coeff_fe = NULL, coeff_re = NULL, resp = TRUE) {
             if(is.null(coeff_fe))
                 coeff_fe <- self$coeff_fe()
             if(is.null(coeff_re))
@@ -620,9 +623,13 @@ SDE <- R6Class(
             lp_mat <- matrix(lp, ncol = length(self$formulas()))
             
             # Apply inverse link to get parameters on natural scale
-            par_mat <- matrix(NA, nrow = nrow(lp_mat), ncol = ncol(lp_mat))
-            for(i in 1:ncol(lp_mat)) {
-                par_mat[,i] <- self$invlink()[[i]](lp_mat[,i])
+            if(resp) {
+                par_mat <- matrix(NA, nrow = nrow(lp_mat), ncol = ncol(lp_mat))
+                for(i in 1:ncol(lp_mat)) {
+                    par_mat[,i] <- self$invlink()[[i]](lp_mat[,i])
+                }                
+            } else {
+                par_mat <- lp_mat
             }
             colnames(par_mat) <- names(self$invlink())
             
