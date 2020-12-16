@@ -144,11 +144,11 @@ ggplot(bm_par_df, aes(time, sigma, col = type)) +
 
 We can simulate from the fitted model with the method `simulate` (only available for Brownian motion and Ornstein-Uhlenbeck models for now), for example to assess whether the model captures relevant features of the observed data. 
 
-```{r ex1-sim}
+```{r ex1-sim2, fig.width = 6, fig.height = 3, out.width="80%", fig.align="center"}
 # Pass 'data' to use observed covariates in simulation
 sim <- bm$simulate(data = data)
 
-ggplot(data, aes(time, Z)) + geom_line()
+ggplot(sim, aes(time, Z)) + geom_line()
 ```
 
 Similarly to the observed time series, the simulated process alternates between periods of low variability (e.g., around $t = 250$ and $t = 750$) and periods of high variability (e.g., around $t = 0$, $t = 500$ and $t = 1000$).
