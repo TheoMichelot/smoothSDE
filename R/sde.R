@@ -656,6 +656,16 @@ SDE <- R6Class(
             X_fe <- m$X_fe
             X_re <- m$X_re
             
+            # Apply decay if necessary
+            if(!is.null(self$other_data()$t_decay)) {
+                rho <- exp(sde$out()$par["log_decay"])
+                t_decay <- self$other_data()$t_decay
+                col_decay <- self$other_data()$col_decay
+                for(i in col_decay) {
+                    X_re[,i] <- X_re[,i] * exp(-rho * t_decay)
+                }
+            }
+            
             # Names of design matrices 
             names_fe <- self$terms()$names_fe
             names_re <- self$terms()$names_re_all
