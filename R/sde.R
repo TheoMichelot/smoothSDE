@@ -738,7 +738,7 @@ SDE <- R6Class(
             # Split matrix into list of matrices
             names <- colnames(post_coeff)
             post_list <- lapply(unique(names), function(name) 
-                post[, which(names == name), drop = FALSE])
+                post_coeff[, which(names == name), drop = FALSE])
             names(post_list) <- unique(names)
             
             return(post_list)
