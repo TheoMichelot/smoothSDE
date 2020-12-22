@@ -735,7 +735,13 @@ SDE <- R6Class(
             # Posterior draws from MVN(par_all, jointCov)
             post_coeff <- rmvn(n = n_post, mu = par_all, V = jointCov)
             
-            return(post_coeff)
+            # Split matrix into list of matrices
+            names <- colnames(post_coeff)
+            post_list <- lapply(unique(names), function(name) 
+                post[, which(names == name), drop = FALSE])
+            names(post_list) <- unique(names)
+            
+            return(post_list)
         },
         
         #' @description Posterior draws of SDE parameters (for uncertainty 
