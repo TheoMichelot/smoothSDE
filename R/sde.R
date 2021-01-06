@@ -544,9 +544,12 @@ SDE <- R6Class(
                 }
                 tmb_dat$t_decay <- self$other_data()$t_decay
                 tmb_dat$col_decay <- self$other_data()$col_decay
+                tmb_dat$ind_decay <- self$other_data()$ind_decay
+                tmb_par$log_decay <- rep(0, length(unique(tmb_dat$ind_decay)))
             } else if(self$type() %in% c("BM", "BM-t", "OU")) {
                 tmb_dat$t_decay <- 0
                 tmb_dat$col_decay <- 0
+                tmb_dat$ind_decay <- 0
                 map <- c(map, list(log_decay = factor(NA)))
             }
             
@@ -634,7 +637,7 @@ SDE <- R6Class(
         
         #' @description Extract effect of one term
         #' 
-        #' This uses fairly naive substring matching using grep, and may not work
+        #' @details This uses fairly naive substring matching using grep, and may not work
         #' if one covariate's name is a substring of another one.
         #' 
         #' @param term Name of term as character string, e.g. "time", 
@@ -654,11 +657,14 @@ SDE <- R6Class(
             
             # Apply decay if necessary
             if(!is.null(self$other_data()$t_decay)) {
-                rho <- exp(sde$out()$par["log_decay"])
+                rho <- exp(self$out()$par[which(names(self$out()$par) == "log_decay")])
                 t_decay <- self$other_data()$t_decay
                 col_decay <- self$other_data()$col_decay
-                for(i in col_decay) {
-                    X_re[,i] <- X_re[,i] * exp(-rho * t_decay)
+                ind_decay <- self$other_data()$ind_decay
+                for(i in seq_along(col_decay)) {
+                    col <- col_decay[i]
+                    ind <- ind_decay[i]
+                    X_re[,col] <- X_re[,col] * exp(-rho[ind] * t_decay)
                 }
             }
             

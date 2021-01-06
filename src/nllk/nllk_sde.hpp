@@ -28,6 +28,7 @@ Type nllk_sde(objective_function<Type>* obj) {
     DATA_VECTOR(other_data); // Optional extra data needed to evaluate the likelihood
     DATA_VECTOR(t_decay);
     DATA_IVECTOR(col_decay);
+    DATA_IVECTOR(ind_decay);
     
     // Number of observations
     int n = obs.rows();
@@ -39,17 +40,18 @@ Type nllk_sde(objective_function<Type>* obj) {
     //============//
     PARAMETER_VECTOR(coeff_fe); // Fixed effect parameters
     PARAMETER_VECTOR(log_lambda); // Smoothness parameters
-    PARAMETER(log_decay);
+    PARAMETER_VECTOR(log_decay);
     PARAMETER_VECTOR(coeff_re); // Random effect parameters
     
-    Type decay_rate = exp(log_decay);
+    vector<Type> decay_rate = exp(log_decay);
     
     matrix<Type> X_re_copy = X_re;
     
     if(t_decay.size() > 1) {
         for(int i = 0; i < col_decay.size(); i++) {
             int i_col = col_decay(i) - 1;
-            vector<Type> decay = exp(-decay_rate * t_decay);
+            int i_ind = ind_decay(i) - 1;
+            vector<Type> decay = exp(-decay_rate(i_ind) * t_decay);
             vector<Type> X_col = X_re.col(i_col);
             vector<Type> X_decay = X_col * decay;
             X_re_copy.col(i_col) = X_decay;
