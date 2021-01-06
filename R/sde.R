@@ -123,6 +123,9 @@ SDE <- R6Class(
                 str <- substr(self$terms()$names_re_all, 1, nchar(decay_term))
                 other_data$col_decay <- which(str == decay_term)
             }
+            if(length(other_data$col_decay) != length(other_data$ind_decay)) {
+                stop("Check length of 'other_data$ind_decay' and 'other_data$col_decay'")
+            }
             private$other_data_ <- other_data
         },
         
