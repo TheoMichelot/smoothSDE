@@ -805,8 +805,8 @@ SDE <- R6Class(
             # and use posterior draws for non-fixed parameters
             post_fe <- matrix(rep(self$coeff_fe(), each = n_post), 
                               nrow = n_post, ncol = sum(self$terms()$ncol_fe))
-            post_fe[,ind_est_fe] <- post_coeff[, which(colnames(post_coeff) == "coeff_fe")]
-            post_re <- post_coeff[, which(colnames(post_coeff) == "coeff_re")]
+            post_fe[,ind_est_fe] <- post_coeff$coeff_fe
+            post_re <- post_coeff$coeff_re
             lp_post <- X_fe %*% t(post_fe) + X_re %*% t(post_re)
             
             lp_array <- array(lp_post, dim = c(n, n_par, n_post))
