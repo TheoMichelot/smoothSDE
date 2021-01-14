@@ -600,20 +600,35 @@ SDE <- R6Class(
             }
         },
         
-        #' @description Get parameters from design matrices
+        #' @description Get SDE parameters
         #' 
-        #' @param X_fe Design matrix for fixed effects, as returned
-        #' by \code{make_mat}
-        #' @param X_re Design matrix for random effects, as returned
-        #' by \code{make_mat}
+        #' @param t Time points for which the parameters should be returned.
+        #' If "all", returns parameters for all time steps. Default: 1.
+        #' @param X_fe Optional design matrix for fixed effects, as returned
+        #' by \code{make_mat}. By default, uses design matrix from data.
+        #' @param X_re Optional design matrix for random effects, as returned
+        #' by \code{make_mat}. By default, uses design matrix from data.
         #' @param coeff_fe Optional vector of fixed effect parameters
         #' @param coeff_re Optional vector of random effect parameters
         #' @param resp Logical (default: TRUE). Should the output be on 
         #' the response scale? If FALSE, the output is on the linear 
         #' predictor scale.
         #' 
-        #' @return Matrix with one column for each parameter
-        par_all = function(X_fe, X_re, coeff_fe = NULL, coeff_re = NULL, resp = TRUE) {
+        #' @return Matrix with one row for each time point in t, and one
+        #' column for each SDE parameter
+        par = function(t = 1, X_fe = NULL, X_re = NULL, 
+                       coeff_fe = NULL, coeff_re = NULL, 
+                       resp = TRUE) {
+            # Use design matrices from data if not provided
+            if(is.null(X_re) | is.null(X_fe)) {
+                m <- self$make_mat()
+                if(is.null(X_fe))
+                    X_fe <- m$X_fe
+                if(is.null(X_re))
+                    X_re <- m$X_re
+            }
+            
+            # Use estimated coeff if not provided
             if(is.null(coeff_fe))
                 coeff_fe <- self$coeff_fe()
             if(is.null(coeff_re))
@@ -634,6 +649,16 @@ SDE <- R6Class(
                 par_mat <- lp_mat
             }
             colnames(par_mat) <- names(self$invlink())
+            
+            # Keep rows of par_mat given in 't'
+            if(length(t) == 1) {
+                if(t == "all")
+                    t <- 1:nrow(par_mat)
+            }
+            if(any(t < 1 | t > nrow(par_mat))) {
+                stop("'t' should be between 1 and", nrow(par_mat))
+            }
+            par_mat <- par_mat[t,, drop = FALSE]
             
             return(par_mat)
         },
@@ -694,11 +719,11 @@ SDE <- R6Class(
             coeff_re_term <- rep(0, ncol(X_re))
             coeff_re_term[wh_keep_re] <- coeff_re[wh_keep_re]
             
-            # Use par_all to get SDE parameters
-            par_mat <- self$par_all(X_fe = X_fe, X_re = X_re,
-                                    coeff_fe = coeff_fe_term, 
-                                    coeff_re = coeff_re_term, 
-                                    resp = resp)
+            # Use par() to get SDE parameters
+            par_mat <- self$par(t = "all", X_fe = X_fe, X_re = X_re,
+                                coeff_fe = coeff_fe_term, 
+                                coeff_re = coeff_re_term, 
+                                resp = resp)
             
             return(par_mat)
         },
@@ -855,9 +880,9 @@ SDE <- R6Class(
             # Get SDE parameters over rows of X_fe and X_re, for each 
             # posterior sample of coeff_fe and coeff_re
             post_par <- sapply(1:n_post, function(i) {
-                self$par_all(X_fe = X_fe, X_re = X_re, 
-                             coeff_fe = post_coeff_fe[i,], 
-                             coeff_re = post_coeff_re[i,])
+                self$par(t = "all", X_fe = X_fe, X_re = X_re, 
+                         coeff_fe = post_coeff_fe[i,], 
+                         coeff_re = post_coeff_re[i,])
             })
             
             # Get confidence intervals as quantiles of posterior tpms
@@ -910,7 +935,7 @@ SDE <- R6Class(
             mats <- self$make_mat(new_data = new_data)
             
             # SDE parameters
-            par <- self$par_all(X_fe = mats$X_fe, X_re = mats$X_re)
+            par <- self$par(t = "all", X_fe = mats$X_fe, X_re = mats$X_re)
             
             if(CI) {
                 # Confidence intervals
@@ -943,8 +968,7 @@ SDE <- R6Class(
             dtimes <- data$time[-start_ind] - data$time[-end_ind]
             
             # Get SDE parameters for each time step
-            mats <- self$make_mat()
-            par <- self$par_all(X_fe = mats$X_fe, X_re = mats$X_re)
+            par <- self$par(t = "all")
             
             # Response variable
             Z <- data[[self$response()]]
@@ -1037,8 +1061,7 @@ SDE <- R6Class(
             }
             
             # Create SDE parameters
-            mats <- self$make_mat(new_data = data)
-            par <- self$par_all(X_fe = mats$X_fe, X_re = mats$X_re)
+            par <- self$par(t = "all")
             
             # Initialize vector of simulated observations
             obs <- rep(NA, nrow(data))
@@ -1097,7 +1120,7 @@ SDE <- R6Class(
         plot_par = function(var, covs = NULL, n_post = 0) {
             # Create design matrices
             mats <- self$make_mat_grid(var = var, covs = covs)
-            par <- self$par_all(X_fe = mats$X_fe, X_re = mats$X_re)
+            par <- self$par(t = "all", X_fe = mats$X_fe, X_re = mats$X_re)
             
             # Data frame for posterior draws
             if(n_post > 0) {
