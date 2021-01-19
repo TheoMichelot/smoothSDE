@@ -775,6 +775,11 @@ SDE <- R6Class(
                 post_coeff[, which(names == name), drop = FALSE])
             names(post_list) <- unique(names)
             
+            # Add empty vector for coeff_re if no random effects
+            if(!"coeff_re" %in% unique(names)) {
+                post_list$coeff_re <- matrix(NA, nrow = n_post, ncol = 0)
+            }
+            
             return(post_list)
         },
         
