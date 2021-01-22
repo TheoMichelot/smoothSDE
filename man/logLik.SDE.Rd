@@ -8,6 +8,8 @@
 }
 \arguments{
 \item{object}{SDE model object}
+
+\item{...}{For compatibility with S3 method}
 }
 \value{
 Maximum log-likelihood value for the model, with attributes

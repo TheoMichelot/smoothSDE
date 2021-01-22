@@ -134,6 +134,7 @@ edf_smooth <- function(X_re, S, lambda) {
 #' as AIC and BIC on SDE objects.
 #' 
 #' @param object SDE model object
+#' @param ... For compatibility with S3 method
 #' 
 #' @return Maximum log-likelihood value for the model, with attributes
 #' \code{df} (degrees of freedom) and \code{nobs} (number of observations)
