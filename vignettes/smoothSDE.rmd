@@ -20,7 +20,7 @@ tables: true
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(
   message = FALSE, error = FALSE, warning = FALSE,
-  comment = NA, cache = TRUE
+  comment = NA
 )
 ```
 
