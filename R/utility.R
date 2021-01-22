@@ -139,7 +139,7 @@ edf_smooth <- function(X_re, S, lambda) {
 #' @return Maximum log-likelihood value for the model, with attributes
 #' \code{df} (degrees of freedom) and \code{nobs} (number of observations)
 #' 
-#' @export logLik.SDE
+#' @export
 logLik.SDE <- function(object, ...) {
     val <- -object$out()$value 
     attributes(val)$df <- object$edf()

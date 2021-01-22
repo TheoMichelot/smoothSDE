@@ -2,6 +2,11 @@
 #' R6 class for stochastic differential equation
 #' 
 #' Contains the model formulas and data.
+#' 
+#' @importFrom mgcv gam
+#' @importFrom ggplot2 ggplot
+#' 
+#' @useDynLib smoothSDE, .registration = TRUE
 SDE <- R6Class(
     classname = "SDE",
     
