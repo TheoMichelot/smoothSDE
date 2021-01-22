@@ -8,6 +8,6 @@ Description: Provides functions to fit stochastic differential
     equations with time-varying parameters.
 License: GPL-3
 Encoding: UTF-8
-Depends: R6, mgcv, TMB, RcppEigen, Matrix, ggplot2, MASS
+Imports: R6, mgcv, TMB, RcppEigen, Matrix, ggplot2, MASS
 LinkingTo: TMB, RcppEigen
 RoxygenNote: 7.1.1
