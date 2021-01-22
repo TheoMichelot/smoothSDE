@@ -128,7 +128,7 @@ edf_smooth <- function(X_re, S, lambda) {
     return(sum(diag(F)))
 }
 
-#' @description logLik function for SDE objects
+#' logLik function for SDE objects
 #' 
 #' This function makes it possible to call generic R methods such
 #' as AIC and BIC on SDE objects.

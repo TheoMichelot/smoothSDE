@@ -16,6 +16,10 @@ each smooth term into a standard deviation, given by
 SD = 1/sqrt(lambda). It is particularly helpful to get the
 standard deviations of independent normal random effects.
 
+This uses fairly naive substring matching using grep, and may not work
+if one covariate's name is a substring of another one.
+
+
 This method generates confidence intervals by simulation.
 That is, it generates \code{n_post} posterior samples of 
 the estimated parameters from a multivariate normal distribution,
@@ -56,7 +60,7 @@ probabilities.
 \item \href{#method-make_mat_grid}{\code{SDE$make_mat_grid()}}
 \item \href{#method-setup}{\code{SDE$setup()}}
 \item \href{#method-fit}{\code{SDE$fit()}}
-\item \href{#method-par_all}{\code{SDE$par_all()}}
+\item \href{#method-par}{\code{SDE$par()}}
 \item \href{#method-get_term}{\code{SDE$get_term()}}
 \item \href{#method-post_coeff}{\code{SDE$post_coeff()}}
 \item \href{#method-post_par}{\code{SDE$post_par()}}
@@ -469,22 +473,32 @@ accessed using the method \code{res}.
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-par_all"></a>}}
-\if{latex}{\out{\hypertarget{method-par_all}{}}}
-\subsection{Method \code{par_all()}}{
-Get parameters from design matrices
+\if{html}{\out{<a id="method-par"></a>}}
+\if{latex}{\out{\hypertarget{method-par}{}}}
+\subsection{Method \code{par()}}{
+Get SDE parameters
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{SDE$par_all(X_fe, X_re, coeff_fe = NULL, coeff_re = NULL, resp = TRUE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{SDE$par(
+  t = 1,
+  X_fe = NULL,
+  X_re = NULL,
+  coeff_fe = NULL,
+  coeff_re = NULL,
+  resp = TRUE
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{X_fe}}{Design matrix for fixed effects, as returned
-by \code{make_mat}}
+\item{\code{t}}{Time points for which the parameters should be returned.
+If "all", returns parameters for all time steps. Default: 1.}
 
-\item{\code{X_re}}{Design matrix for random effects, as returned
-by \code{make_mat}}
+\item{\code{X_fe}}{Optional design matrix for fixed effects, as returned
+by \code{make_mat}. By default, uses design matrix from data.}
+
+\item{\code{X_re}}{Optional design matrix for random effects, as returned
+by \code{make_mat}. By default, uses design matrix from data.}
 
 \item{\code{coeff_fe}}{Optional vector of fixed effect parameters}
 
@@ -497,7 +511,8 @@ predictor scale.}
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-Matrix with one column for each parameter
+Matrix with one row for each time point in t, and one
+column for each SDE parameter
 }
 }
 \if{html}{\out{<hr>}}
@@ -505,9 +520,6 @@ Matrix with one column for each parameter
 \if{latex}{\out{\hypertarget{method-get_term}{}}}
 \subsection{Method \code{get_term()}}{
 Extract effect of one term
-
-This uses fairly naive substring matching using grep, and may not work
-if one covariate's name is a substring of another one.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{SDE$get_term(term, resp = FALSE, coeff_fe = NULL, coeff_re = NULL)}\if{html}{\out{</div>}}
 }
