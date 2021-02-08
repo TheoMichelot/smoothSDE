@@ -239,6 +239,40 @@ SDE <- R6Class(
             
         },
         
+        #' @description Get design matrix for random effects in decay model
+        #' 
+        #' @details The design matrix is obtained by taking X_re (returned by 
+        #' make_mat), and multiplying the relevant columns by something like
+        #' exp(-rho * time) to force the splines to decay to zero with a rate
+        #' determined by rho.
+        #' 
+        #' @return Design matrix
+        X_re_decay = function() {
+            # Check that there are decaying terms
+            if(!is.null(self$other_data()$t_decay)) {
+                # Make design matrices
+                m <- self$make_mat()
+                X_re <- m$X_re
+                
+                # Decay parameters
+                rho <- exp(self$out()$par[which(names(self$out()$par) == "log_decay")])
+                t_decay <- self$other_data()$t_decay
+                col_decay <- self$other_data()$col_decay
+                ind_decay <- self$other_data()$ind_decay
+                
+                # Apply decay
+                for(i in seq_along(col_decay)) {
+                    col <- col_decay[i]
+                    ind <- ind_decay[i]
+                    X_re[,col] <- X_re[,col] * exp(-rho[ind] * t_decay)
+                }
+            } else {
+                stop("This model has no decaying terms")
+            }
+            
+            return(X_re)
+        },
+        
         ##############
         ## Mutators ##
         ##############
