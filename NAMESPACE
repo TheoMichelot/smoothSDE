@@ -2,6 +2,7 @@
 
 S3method(logLik,SDE)
 export(SDE)
+importFrom(MASS,ginv)
 importFrom(Matrix,bdiag)
 importFrom(R6,R6Class)
 importFrom(TMB,MakeADFun)

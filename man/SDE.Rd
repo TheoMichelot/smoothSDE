@@ -16,6 +16,12 @@ each smooth term into a standard deviation, given by
 SD = 1/sqrt(lambda). It is particularly helpful to get the
 standard deviations of independent normal random effects.
 
+The design matrix is obtained by taking X_re (returned by 
+make_mat), and multiplying the relevant columns by something like
+exp(-rho * time) to force the splines to decay to zero with a rate
+determined by rho.
+
+
 This uses fairly naive substring matching using grep, and may not work
 if one covariate's name is a substring of another one.
 
@@ -38,6 +44,7 @@ probabilities.
 \item \href{#method-type}{\code{SDE$type()}}
 \item \href{#method-response}{\code{SDE$response()}}
 \item \href{#method-fixpar}{\code{SDE$fixpar()}}
+\item \href{#method-mats}{\code{SDE$mats()}}
 \item \href{#method-other_data}{\code{SDE$other_data()}}
 \item \href{#method-link}{\code{SDE$link()}}
 \item \href{#method-invlink}{\code{SDE$invlink()}}
@@ -51,6 +58,7 @@ probabilities.
 \item \href{#method-tmb_rep}{\code{SDE$tmb_rep()}}
 \item \href{#method-obs}{\code{SDE$obs()}}
 \item \href{#method-eqn}{\code{SDE$eqn()}}
+\item \href{#method-X_re_decay}{\code{SDE$X_re_decay()}}
 \item \href{#method-update_coeff_fe}{\code{SDE$update_coeff_fe()}}
 \item \href{#method-update_coeff_re}{\code{SDE$update_coeff_re()}}
 \item \href{#method-update_lambda}{\code{SDE$update_lambda()}}
@@ -162,6 +170,16 @@ Name(s) of response variable(s)
 Name(s) of fixed parameter(s)
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{SDE$fixpar()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-mats"></a>}}
+\if{latex}{\out{\hypertarget{method-mats}{}}}
+\subsection{Method \code{mats()}}{
+List of model matrices (X_fe, X_re, and S)
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{SDE$mats()}\if{html}{\out{</div>}}
 }
 
 }
@@ -302,6 +320,19 @@ Print equation for this model
 \if{html}{\out{<div class="r">}}\preformatted{SDE$eqn()}\if{html}{\out{</div>}}
 }
 
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-X_re_decay"></a>}}
+\if{latex}{\out{\hypertarget{method-X_re_decay}{}}}
+\subsection{Method \code{X_re_decay()}}{
+Get design matrix for random effects in decay model
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{SDE$X_re_decay()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+Design matrix
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-update_coeff_fe"></a>}}
