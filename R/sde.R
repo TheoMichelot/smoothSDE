@@ -92,7 +92,7 @@ SDE <- R6Class(
             }
             private$data_ <- data
             
-            # Save terms of model formulas
+            # Save terms of model formulas and model matrices
             mats <- self$make_mat()
             ncol_fe <- mats$ncol_fe
             ncol_re <- mats$ncol_re
@@ -255,8 +255,7 @@ SDE <- R6Class(
             # Check that there are decaying terms
             if(!is.null(self$other_data()$t_decay)) {
                 # Make design matrices
-                m <- self$make_mat()
-                X_re <- m$X_re
+                X_re <- self$mats()$X_re
                 
                 # Decay parameters
                 rho <- exp(self$out()$par[which(names(self$out()$par) == "log_decay")])
@@ -339,7 +338,7 @@ SDE <- R6Class(
             n_par <- length(self$formulas())
             
             # Number of columns of X_fe for each SDE parameter
-            ncol_fe <- self$make_mat()$ncol_fe
+            ncol_fe <- self$terms()$ncol_fe
             
             # Counter for coefficients in coeff_fe
             k <- 1
@@ -486,12 +485,11 @@ SDE <- R6Class(
             n <- nrow(self$data())
             
             # Create model matrices
-            mats <- self$make_mat()
-            X_fe <- mats$X_fe
-            X_re <- mats$X_re
-            S <- mats$S
-            ncol_fe <- mats$ncol_fe
-            ncol_re <- mats$ncol_re
+            X_fe <- self$mats()$X_fe
+            X_re <- self$mats()$X_re
+            S <- self$mats()$S
+            ncol_fe <- self$terms()$ncol_fe
+            ncol_re <- self$terms()$ncol_re
             
             # Format initial parameters for TMB
             # (First fixed effects, then random effects)
@@ -668,17 +666,16 @@ SDE <- R6Class(
                        coeff_fe = NULL, coeff_re = NULL, 
                        resp = TRUE) {
             # Use design matrices from data if not provided
-            if(is.null(X_re) | is.null(X_fe)) {
-                m <- self$make_mat()
-                if(is.null(X_fe))
-                    X_fe <- m$X_fe
-                if(is.null(X_re)) {
-                    # Apply decay if necessary
-                    if(is.null(self$other_data()$t_decay)) {
-                        X_re <- m$X_re
-                    } else {
-                        X_re <- self$X_re_decay()
-                    }
+            if(is.null(X_fe)) {
+                X_fe <- self$mats()$X_fe
+            }
+
+            if(is.null(X_re)) {
+                # Apply decay if necessary
+                if(is.null(self$other_data()$t_decay)) {
+                    X_re <- self$mats()$X_re
+                } else {
+                    X_re <- self$X_re_decay()
                 }
             }
             
@@ -733,14 +730,13 @@ SDE <- R6Class(
         #' 'par' over times of observation
         get_term = function(term, resp = FALSE, coeff_fe = NULL, coeff_re = NULL) {
             # Make design matrices
-            m <- self$make_mat()
-            X_fe <- m$X_fe
+            X_fe <- self$mats()$X_fe
 
             # Apply decay if necessary
             if(!is.null(self$other_data()$t_decay)) {
                 X_re <- self$X_re_decay()
             } else {
-                X_re <- m$X_re
+                X_re <- self$mats()$X_re
             }
             
             # Names of design matrices 
