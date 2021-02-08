@@ -668,8 +668,13 @@ SDE <- R6Class(
                 m <- self$make_mat()
                 if(is.null(X_fe))
                     X_fe <- m$X_fe
-                if(is.null(X_re))
-                    X_re <- m$X_re
+                if(is.null(X_re)) {
+                    if(is.null(self$other_data()$t_decay)) {
+                        X_re <- m$X_re
+                    } else {
+                        X_re <- self$X_re_decay()
+                    }
+                }
             }
             
             # Use estimated coeff if not provided
@@ -725,19 +730,12 @@ SDE <- R6Class(
             # Make design matrices
             m <- self$make_mat()
             X_fe <- m$X_fe
-            X_re <- m$X_re
-            
+
             # Apply decay if necessary
             if(!is.null(self$other_data()$t_decay)) {
-                rho <- exp(self$out()$par[which(names(self$out()$par) == "log_decay")])
-                t_decay <- self$other_data()$t_decay
-                col_decay <- self$other_data()$col_decay
-                ind_decay <- self$other_data()$ind_decay
-                for(i in seq_along(col_decay)) {
-                    col <- col_decay[i]
-                    ind <- ind_decay[i]
-                    X_re[,col] <- X_re[,col] * exp(-rho[ind] * t_decay)
-                }
+                X_re <- self$X_re_decay()
+            } else {
+                X_re <- m$X_re
             }
             
             # Names of design matrices 
