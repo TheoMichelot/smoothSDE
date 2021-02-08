@@ -669,6 +669,7 @@ SDE <- R6Class(
                 if(is.null(X_fe))
                     X_fe <- m$X_fe
                 if(is.null(X_re)) {
+                    # Apply decay if necessary
                     if(is.null(self$other_data()$t_decay)) {
                         X_re <- m$X_re
                     } else {
