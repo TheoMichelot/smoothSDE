@@ -101,6 +101,7 @@ SDE <- R6Class(
                                    names_fe = colnames(mats$X_fe),
                                    names_re_all = colnames(mats$X_re),
                                    names_re = names(ncol_re))
+            private$mats_ <- list(X_fe = mats$X_fe, X_re = mats$X_re, S = mats$S)
             
             # Initial parameters (zero if par0 not provided)
             self$update_coeff_fe(rep(0, sum(ncol_fe)))
@@ -156,6 +157,9 @@ SDE <- R6Class(
         
         #' @description Name(s) of fixed parameter(s)
         fixpar = function() {return(private$fixpar_)},
+        
+        #' @description List of model matrices (X_fe, X_re, and S)
+        mats = function() {return(private$mats_)},
         
         #' @description Named list of additional data objects
         other_data = function() {return(private$other_data_)},
@@ -1233,6 +1237,7 @@ SDE <- R6Class(
         type_ = NULL,
         response_ = NULL,
         fixpar_ = NULL,
+        mats_ = NULL,
         other_data_ = NULL,
         link_ = NULL,
         invlink_ = NULL,
