@@ -188,6 +188,12 @@ SDE <- R6Class(
         #' standard deviations of independent normal random effects.
         vcomp = function() {return(1/sqrt(private$lambda_))},
         
+        #' @description Decay parameter
+        rho = function() {
+            log_decay <- self$out()$par[which(names(self$out()$par) == "log_decay")]
+            return(unname(exp(log_decay)))
+        },
+        
         #' @description Terms of model formulas
         terms = function() {return(private$terms_)},
         
@@ -259,7 +265,7 @@ SDE <- R6Class(
                 X_re <- self$mats()$X_re
                 
                 # Decay parameters
-                rho <- exp(self$out()$par[which(names(self$out()$par) == "log_decay")])
+                rho <- self$rho()
                 t_decay <- self$other_data()$t_decay
                 col_decay <- self$other_data()$col_decay
                 ind_decay <- self$other_data()$ind_decay
