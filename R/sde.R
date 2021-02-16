@@ -1172,7 +1172,7 @@ SDE <- R6Class(
         #' @param n_post Number of posterior draws to plot. Default: 0.
         #' 
         #' @return A ggplot object
-        plot_par = function(var, covs = NULL, n_post = 0) {
+        plot_par = function(var, covs = NULL, n_post = 100) {
             # Create design matrices
             mats <- self$make_mat_grid(var = var, covs = covs)
             par <- self$par(t = "all", X_fe = mats$X_fe, X_re = mats$X_re)
