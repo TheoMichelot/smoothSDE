@@ -52,6 +52,7 @@ probabilities.
 \item \href{#method-coeff_re}{\code{SDE$coeff_re()}}
 \item \href{#method-lambda}{\code{SDE$lambda()}}
 \item \href{#method-vcomp}{\code{SDE$vcomp()}}
+\item \href{#method-rho}{\code{SDE$rho()}}
 \item \href{#method-terms}{\code{SDE$terms()}}
 \item \href{#method-out}{\code{SDE$out()}}
 \item \href{#method-tmb_obj}{\code{SDE$tmb_obj()}}
@@ -250,6 +251,16 @@ Smoothness parameters
 Variance components of smooth terms
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{SDE$vcomp()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-rho"></a>}}
+\if{latex}{\out{\hypertarget{method-rho}{}}}
+\subsection{Method \code{rho()}}{
+Decay parameter
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{SDE$rho()}\if{html}{\out{</div>}}
 }
 
 }
@@ -749,7 +760,7 @@ Input data frame with extra column for simulated time series
 \subsection{Method \code{plot_par()}}{
 Plot observation parameters
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{SDE$plot_par(var, covs = NULL, n_post = 0)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{SDE$plot_par(var, covs = NULL, n_post = 100)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -763,7 +774,7 @@ for each covariate, giving the values that should be used. If this is
 not specified, the mean value is used for numeric variables, and the
 first level for factor variables.}
 
-\item{\code{n_post}}{Number of posterior draws to plot. Default: 0.}
+\item{\code{n_post}}{Number of posterior draws to plot. Default: 100.}
 }
 \if{html}{\out{</div>}}
 }
