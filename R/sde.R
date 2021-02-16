@@ -1219,16 +1219,25 @@ SDE <- R6Class(
             
             # Create plot
             pal <- c("no" = rgb(0.7, 0, 0, 0.1), "yes" = rgb(0, 0, 0, 1))
-            p <- ggplot(df, aes(var, val, group = stratum, col = mle)) + 
-                theme_light() + geom_line() +
+            p0 <- ggplot(df, aes(var, val, group = stratum, col = mle)) + 
                 scale_colour_manual(values = pal, guide = "none") +
                 facet_wrap(c("par"), scales = "free_y",
                            strip.position = "left",
                            labeller = label_bquote(.(as.character(par)))) +
-                xlab(var) + ylab(NULL) + ggtitle(plot_txt) +
+                theme_light() + xlab(var) + ylab(NULL) + ggtitle(plot_txt) +
                 theme(strip.background = element_blank(),
                       strip.placement = "outside", 
                       strip.text = element_text(colour = "black"))
+            
+            if(is.factor(df$var)) {
+                p <- p0 +
+                    geom_point(aes(size = mle)) +
+                    scale_size_manual(values = c(0.1, 1), guide = "none") +
+                    theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
+            } else {
+                p <- p0 +
+                    geom_line()
+            }
             
             return(p)
         }
