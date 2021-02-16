@@ -1169,7 +1169,7 @@ SDE <- R6Class(
         #' for each covariate, giving the values that should be used. If this is
         #' not specified, the mean value is used for numeric variables, and the
         #' first level for factor variables.
-        #' @param n_post Number of posterior draws to plot. Default: 0.
+        #' @param n_post Number of posterior draws to plot. Default: 100.
         #' 
         #' @return A ggplot object
         plot_par = function(var, covs = NULL, n_post = 100) {
