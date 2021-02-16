@@ -1139,8 +1139,8 @@ SDE <- R6Class(
                     # If OU, loop over observation times
                     for(i in 2:sub_n) {
                         # Generate observation from OU transition density
-                        mean <- sub_obs[i-1] + sub_par[i-1, 1] + 
-                            exp(- sub_par[i-1, 2] * dtimes[i-1]) * (sub_obs[i-1] - sub_par[i-1, 1])
+                        mean <- exp(-sub_par[i-1, 2] * dtimes[i-1]) * sub_obs[i-1] +
+                            (1 - exp(-sub_par[i-1, 2] * dtimes[i-1])) * sub_par[i-1, 1]
                         sd <- sub_par[i-1, 3] / sqrt(2 * sub_par[i-1, 2]) * 
                             sqrt(1 - exp(-2*sub_par[i-1, 2]*dtimes[i-1]))
                         sub_obs[i] <- rnorm(n = 1, mean = mean, sd = sd)
