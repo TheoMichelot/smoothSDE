@@ -129,14 +129,21 @@ SDE <- R6Class(
                 })
             }
             
-            # Find columns for decay if necessary
-            if(!is.null(other_data$t_decay) & is.null(other_data$col_decay)) {
-                decay_term <- other_data$decay_term
-                str <- substr(self$terms()$names_re_all, 1, nchar(decay_term))
-                other_data$col_decay <- which(str == decay_term)
-            }
-            if(length(other_data$col_decay) != length(other_data$ind_decay)) {
-                stop("Check length of 'other_data$ind_decay' and 'other_data$col_decay'")
+            # Process decay terms
+            if(!is.null(other_data$t_decay)) {
+                # Find columns for decay if necessary
+                if(is.null(other_data$col_decay)) {
+                    decay_term <- other_data$decay_term
+                    str <- substr(self$terms()$names_re_all, 1, nchar(decay_term))
+                    other_data$col_decay <- which(str == decay_term)                    
+                }
+                if(length(other_data$t_decay) != length(formulas) * nrow(data)) {
+                    stop(paste0("'other_data$t_decay' should be of length (number ",
+                                "of parameters) x (number of data)"))
+                }
+                if(length(other_data$col_decay) != length(other_data$ind_decay)) {
+                    stop("Check length of 'other_data$ind_decay' and 'other_data$col_decay'")
+                }
             }
             private$other_data_ <- other_data
         },

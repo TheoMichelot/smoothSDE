@@ -44,9 +44,7 @@ Type nllk_sde(objective_function<Type>* obj) {
     PARAMETER_VECTOR(coeff_re); // Random effect parameters
     
     vector<Type> decay_rate = exp(log_decay);
-    
     matrix<Type> X_re_copy = X_re;
-    
     if(t_decay.size() > 1) {
         for(int i = 0; i < col_decay.size(); i++) {
             int i_col = col_decay(i) - 1;
@@ -76,14 +74,14 @@ Type nllk_sde(objective_function<Type>* obj) {
     for(int i = 1; i < n; i ++) {
         // No contribution if first observation of the track
         if(ID(i-1) == ID(i)) {
-            llk = llk + tr_dens<Type>(obs.row(i), obs.row(i-1), dtimes(i-1), 
+            llk = llk + tr_dens<Type>(obs.row(i), obs.row(i-1), dtimes(i-1),
                                       par_mat.row(i-1), true, type, other_data);
         }
     }
     
     //===================//
     // Smoothing penalty //
-    // ===================//
+    //===================//
     Type nllk = -llk;
     // Are there random effects?
     if(ncol_re(0) > 0) {
