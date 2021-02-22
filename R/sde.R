@@ -346,6 +346,11 @@ SDE <- R6Class(
             cat("\n")
         },
         
+        #' @description Print SDE object
+        print = function() {
+            self$message()  
+        },
+        
         #' @description Indices of fixed coefficients in coeff_fe
         ind_fixcoeff = function() {
             # Number of SDE parameters
