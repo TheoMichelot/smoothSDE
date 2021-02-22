@@ -605,20 +605,25 @@ SDE <- R6Class(
             }
             
             # Decaying response model
-            if(!is.null(self$other_data()$t_decay)) {
-                if(any(self$other_data()$col_decay > length(self$terms()$names_re_all))) {
-                    stop(paste0("'col_decay' should be between 1 and ", 
-                                length(self$terms()$names_re_all)))
+            if(self$type() %in% c("BM", "BM-t", "OU")) {
+                if(!is.null(self$other_data()$t_decay)) {
+                    if(any(self$other_data()$col_decay > length(self$terms()$names_re_all))) {
+                        stop(paste0("'col_decay' should be between 1 and ", 
+                                    length(self$terms()$names_re_all)))
+                    }
+                    tmb_dat$t_decay <- self$other_data()$t_decay
+                    tmb_dat$col_decay <- self$other_data()$col_decay
+                    tmb_dat$ind_decay <- self$other_data()$ind_decay
+                    tmb_par$log_decay <- rep(0, length(unique(tmb_dat$ind_decay)))
+                } else  {
+                    tmb_dat$t_decay <- 0
+                    tmb_dat$col_decay <- 0
+                    tmb_dat$ind_decay <- 0
+                    map <- c(map, list(log_decay = factor(NA)))
                 }
-                tmb_dat$t_decay <- self$other_data()$t_decay
-                tmb_dat$col_decay <- self$other_data()$col_decay
-                tmb_dat$ind_decay <- self$other_data()$ind_decay
-                tmb_par$log_decay <- rep(0, length(unique(tmb_dat$ind_decay)))
-            } else if(self$type() %in% c("BM", "BM-t", "OU")) {
-                tmb_dat$t_decay <- 0
-                tmb_dat$col_decay <- 0
-                tmb_dat$ind_decay <- 0
-                map <- c(map, list(log_decay = factor(NA)))
+            } else {
+                # Remove log_decay if this is a model for which it isn't implemented
+                tmb_par$log_decay <- NULL
             }
             
             # Create TMB object
