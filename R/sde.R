@@ -644,12 +644,15 @@ SDE <- R6Class(
                 self$setup(silent = silent)
             }
             
-            # Fit model
-            private$out_ <- do.call(optim, private$tmb_obj_)
+            sys_time <- system.time({
+                # Fit model
+                private$out_ <- do.call(optim, private$tmb_obj_)
+            })
+            private$out_$systime <- sys_time
             # Get estimates and precision matrix for all parameters
             private$tmb_rep_ <- sdreport(private$tmb_obj_, getJointPrecision = TRUE, 
                                          skip.delta.method = FALSE)
-            
+
             # Save parameter estimates
             par_list <- as.list(private$tmb_rep_, "Estimate")
             self$update_coeff_fe(par_list$coeff_fe)
