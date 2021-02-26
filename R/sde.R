@@ -495,11 +495,12 @@ SDE <- R6Class(
         
         #' @description TMB setup
         #'  
-        #' This creates an attribute \code{tmb_obj}, which can be used to 
+        #' @details This creates an attribute \code{tmb_obj}, which can be used to 
         #' evaluate the negative log-likelihood function.
         #' 
         #' @param silent Logical. If TRUE, all tracing outputs are hidden (default).
-        setup = function(silent = TRUE) {
+        #' @param map List passed to MakeADFun to fix parameters. (See TMB documentation.)
+        setup = function(silent = TRUE, map = NULL) {
             # Number of time steps
             n <- nrow(self$data())
             
@@ -518,7 +519,6 @@ SDE <- R6Class(
                             coeff_re = 0)
             
             # Setup random effects
-            map <- NULL
             random <- NULL
             if(is.null(S)) {
                 # If there are no random effects, 
@@ -533,7 +533,7 @@ SDE <- R6Class(
                 # set initial values for coeff_re and log_lambda
                 random <- c(random, "coeff_re")
                 tmb_par$coeff_re <- self$coeff_re()
-                tmb_par$log_lambda <- rep(0, length(ncol_re))
+                tmb_par$log_lambda <- log(self$lambda())
             }
             
             # Setup fixed parameters
@@ -637,7 +637,7 @@ SDE <- R6Class(
         
         #' @description Model fitting
         #' 
-        #' The negative log-likelihood of the model is minimised using the
+        #' @details The negative log-likelihood of the model is minimised using the
         #' function \code{optim}. TMB uses the Laplace approximation to integrate 
         #' the random effects out of the likelihood.
         #' 
@@ -645,13 +645,14 @@ SDE <- R6Class(
         #' accessed using the method \code{res}.
         #' 
         #' @param silent Logical. If TRUE, all tracing outputs are hidden (default).
-        fit = function(silent = TRUE) {
+        #' @param map List passed to MakeADFun to fix parameters. See TMB documentation.
+        fit = function(silent = TRUE, map = NULL) {
             # Print model formulation
             self$message()
             
             # Setup if necessary
             if(is.null(private$tmb_obj_)) {
-                self$setup(silent = silent)
+                self$setup(silent = silent, map = map)
             }
             
             sys_time <- system.time({
@@ -660,7 +661,8 @@ SDE <- R6Class(
             })
             private$out_$systime <- sys_time
             # Get estimates and precision matrix for all parameters
-            private$tmb_rep_ <- sdreport(private$tmb_obj_, getJointPrecision = TRUE, 
+            private$tmb_rep_ <- sdreport(private$tmb_obj_, 
+                                         getJointPrecision = TRUE, 
                                          skip.delta.method = FALSE)
 
             # Save parameter estimates
