@@ -1209,6 +1209,13 @@ SDE <- R6Class(
         #' 
         #' @return A ggplot object
         plot_par = function(var, covs = NULL, n_post = 100) {
+            if(missing(var)) {
+                var_names <- unique(rapply(self$formulas(), all.vars))
+                error_message <- paste0("'var' should be one of: '", 
+                                        paste0(var_names, collapse = "', '"), "'")
+                stop(error_message)
+            }
+            
             # Create design matrices
             mats <- self$make_mat_grid(var = var, covs = covs)
             par <- self$par(t = "all", X_fe = mats$X_fe, X_re = mats$X_re)
