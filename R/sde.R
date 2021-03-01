@@ -144,6 +144,9 @@ SDE <- R6Class(
                 if(length(other_data$col_decay) != length(other_data$ind_decay)) {
                     stop("Check length of 'other_data$ind_decay' and 'other_data$col_decay'")
                 }
+                private$rho_ <- rep(1, length(unique(other_data$ind_decay)))
+            } else {
+                private$rho_ <- 1
             }
             private$other_data_ <- other_data
         },
@@ -197,8 +200,7 @@ SDE <- R6Class(
         
         #' @description Decay parameter
         rho = function() {
-            log_decay <- self$out()$par[which(names(self$out()$par) == "log_decay")]
-            return(unname(exp(log_decay)))
+            return(private$rho_)
         },
         
         #' @description Terms of model formulas
@@ -315,6 +317,13 @@ SDE <- R6Class(
         update_lambda = function(new_lambda) {
             private$lambda_ <- matrix(new_lambda)
             rownames(private$lambda_) <- self$terms()$names_re
+        },
+        
+        #' @description Update decay parameter
+        #' 
+        #' @param new_rho New decay parameter vector
+        update_rho = function(new_rho) {
+            private$rho_ <- new_rho
         },
         
         ###################
@@ -515,7 +524,7 @@ SDE <- R6Class(
             # (First fixed effects, then random effects)
             tmb_par <- list(coeff_fe = self$coeff_fe(),
                             log_lambda = 0,
-                            log_decay = 0,
+                            log_decay = log(self$rho()),
                             coeff_re = 0)
             
             # Setup random effects
@@ -614,7 +623,6 @@ SDE <- R6Class(
                     tmb_dat$t_decay <- self$other_data()$t_decay
                     tmb_dat$col_decay <- self$other_data()$col_decay
                     tmb_dat$ind_decay <- self$other_data()$ind_decay
-                    tmb_par$log_decay <- rep(0, length(unique(tmb_dat$ind_decay)))
                 } else  {
                     tmb_dat$t_decay <- 0
                     tmb_dat$col_decay <- 0
@@ -672,6 +680,12 @@ SDE <- R6Class(
                 # Only save coeff_re and lambda is there are random effects
                 self$update_coeff_re(par_list$coeff_re)
                 self$update_lambda(exp(par_list$log_lambda))
+            }
+            
+            if(!is.null(self$other_data()$t_decay)) {
+                # Update decay rate parameter if decay model
+                log_decay <- par_list$log_decay
+                self$update_rho(exp(log_decay))
             }
         },
         
@@ -1278,6 +1292,7 @@ SDE <- R6Class(
         coeff_fe_ = NULL,
         coeff_re_ = NULL,
         lambda_ = NULL,
+        rho_ = NULL,
         terms_ = NULL,
         tmb_obj_ = NULL,
         out_ = NULL,
