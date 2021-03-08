@@ -1201,6 +1201,8 @@ SDE <- R6Class(
         #' 
         #' @param var Name of covariate as a function of which the parameters
         #' should be plotted
+        #' @param par_names Optional vector for the names of SDE parameters to plot.
+        #' If not specified, all parameters are plotted.
         #' @param covs Optional data frame with a single row and one column
         #' for each covariate, giving the values that should be used. If this is
         #' not specified, the mean value is used for numeric variables, and the
@@ -1208,7 +1210,7 @@ SDE <- R6Class(
         #' @param n_post Number of posterior draws to plot. Default: 100.
         #' 
         #' @return A ggplot object
-        plot_par = function(var, covs = NULL, n_post = 100) {
+        plot_par = function(var, par_names = NULL, covs = NULL, n_post = 100) {
             if(missing(var)) {
                 var_names <- unique(rapply(self$formulas(), all.vars))
                 error_message <- paste0("'var' should be one of: '", 
@@ -1242,6 +1244,16 @@ SDE <- R6Class(
             # Full data frame
             df <- rbind(mle_df, post_df)
             df$var <- mats$new_data[, var]
+            
+            # If 'par' is specified, subset to relevant parameters
+            if(!is.null(par_names)) {
+                if(!all(par_names %in% unique(df$par))) {
+                    error_message <- paste0("Check that elements of 'par' are in: '", 
+                                            paste0(unique(df$par), collapse = "', '"), "'")
+                    stop(error_message)
+                }
+                df <- subset(df, par %in% par_names)
+            }
             
             # Create caption with values of other (fixed) covariates      
             plot_txt <- NULL
