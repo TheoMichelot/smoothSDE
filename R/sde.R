@@ -672,7 +672,7 @@ SDE <- R6Class(
             private$tmb_rep_ <- sdreport(private$tmb_obj_, 
                                          getJointPrecision = TRUE, 
                                          skip.delta.method = FALSE)
-
+            
             # Save parameter estimates
             par_list <- as.list(private$tmb_rep_, "Estimate")
             self$update_coeff_fe(par_list$coeff_fe)
@@ -712,7 +712,7 @@ SDE <- R6Class(
             if(is.null(X_fe)) {
                 X_fe <- self$mats()$X_fe
             }
-
+            
             if(is.null(X_re)) {
                 # Apply decay if necessary
                 if(is.null(self$other_data()$t_decay)) {
@@ -766,20 +766,27 @@ SDE <- R6Class(
         #' or "s(time)"
         #' @param resp Logical (default: FALSE). If TRUE, return values
         #' on response scale rather than linear predictor scale.
+        #' @param X_fe Optional design matrix for fixed effects. If not
+        #' provided, defaults to design matrix from data.
+        #' @param X_re Optional design matrix for random effects. If not
+        #' provided, defaults to design matrix from data.
         #' @param coeff_fe Optional vector of fixed effect parameters
         #' @param coeff_re Optional vector of random effect parameters
         #'
         #' @return Vector of values of effect of 'term' on SDE parameter
         #' 'par' over times of observation
-        get_term = function(term, resp = FALSE, coeff_fe = NULL, coeff_re = NULL) {
-            # Make design matrices
-            X_fe <- self$mats()$X_fe
-
-            # Apply decay if necessary
-            if(!is.null(self$other_data()$t_decay)) {
-                X_re <- self$X_re_decay()
-            } else {
-                X_re <- self$mats()$X_re
+        get_term = function(term, t = "all", resp = FALSE, X_fe = NULL, X_re = NULL, 
+                            coeff_fe = NULL, coeff_re = NULL) {
+            if(is.null(X_fe)) {
+                X_fe <- self$mats()$X_fe                
+            }
+            if(is.null(X_re)) {
+                # Apply decay if necessary
+                if(!is.null(self$other_data()$t_decay)) {
+                    X_re <- self$X_re_decay()
+                } else {
+                    X_re <- self$mats()$X_re
+                }                
             }
             
             # Names of design matrices 
@@ -806,7 +813,7 @@ SDE <- R6Class(
             coeff_re_term[wh_keep_re] <- coeff_re[wh_keep_re]
             
             # Use par() to get SDE parameters
-            par_mat <- self$par(t = "all", X_fe = X_fe, X_re = X_re,
+            par_mat <- self$par(t = t, X_fe = X_fe, X_re = X_re,
                                 coeff_fe = coeff_fe_term, 
                                 coeff_re = coeff_re_term, 
                                 resp = resp)
@@ -1061,31 +1068,32 @@ SDE <- R6Class(
             # Get SDE parameters for each time step
             par <- self$par(t = "all")
             
-            # Response variable
-            Z <- data[[self$response()]]
+            # Response variable(s)
+            Z <- as.matrix(data[, self$response(), drop = FALSE])
             
             # Compute mean and sd of normal transition density
             if(self$type() == "BM") {
-                mean <- Z[-end_ind] + par[-end_ind, "mu"] * dtimes
+                mean <- Z[-end_ind,] + par[-end_ind, "mu"] * dtimes
                 sd <- par[-end_ind, "sigma"] * sqrt(dtimes)
             } else if (self$type() == "BM-t") {
                 df <- self$other_data()$df # degrees of freedom
-                mean <- Z[-end_ind] + par[-end_ind, "mu"] * dtimes
+                mean <- Z[-end_ind,] + par[-end_ind, "mu"] * dtimes
                 sd <- par[-end_ind, "sigma"] * sqrt(dtimes)
                 sd <- sd / sqrt(df / (df-2)) # this is actually the scale parameter, not the SD any more
             } else if(self$type() == "OU") {
-                mu <- par[-end_ind, "mu"]
+                # Need to account for case where mu has several dimensions
+                mu <- par[-end_ind, which(substr(colnames(par), 1, 2) == "mu")]
                 beta <- par[-end_ind, "beta"]
                 sigma <- par[-end_ind, "sigma"]
-                mean <-  mu + exp(- beta * dtimes) * (Z[-end_ind] - mu)
+                mean <-  mu + exp(- beta * dtimes) * (Z[-end_ind,] - mu)
                 sd <- sigma/sqrt(2 * beta) * sqrt(1 - exp(-2 * beta * dtimes))
             } else {
                 stop(paste("Residuals not implemented for model", self$type()))
             }
             
             # Residuals ~ N(0, 1) under assumptions of model and discretization
-            res <- rep(NA, n)
-            res[-end_ind] <- (Z[-start_ind] - mean) / sd
+            res <- matrix(NA, nrow = n, ncol = ncol(Z))
+            res[-end_ind,] <- (Z[-start_ind,] - mean) / sd
             return(res)
         },
         
@@ -1296,6 +1304,40 @@ SDE <- R6Class(
             
             return(p)
         }
+        
+        # plot_term = function(term, var, par_name, t = "all", 
+        #                      resp = FALSE, n_post = 1000) {
+        #     # MLE for term
+        #     mle <- self$get_term(term = term, t = t, resp = resp)[,par_name]
+        #     
+        #     # Posterior sample for term
+        #     post_coeff <- self$post_coeff(n_post = n_post)
+        #     post_term <- sapply(1:n_post, function(i) {
+        #         term <- self$get_term(term = term, t = t, resp = resp, 
+        #                               coeff_fe = post_coeff$coeff_fe[i,],
+        #                               coeff_re = post_coeff$coeff_re[i,])
+        #         return(term[,par_name])
+        #     })
+        #     
+        #     # Quantiles for confidence bands
+        #     quants <- apply(post_term, 1, quantile, probs = c(0.025, 0.975))
+        #     
+        #     # Covariate for the x axis
+        #     x <- data[[var]]
+        #     if(t != "all") {
+        #         x <- x[t]
+        #     }
+        #     
+        #     # Data frame for plot
+        #     df <- data.frame(x = x, mle = mle,
+        #                      low = quants[1,],
+        #                      upp = quants[2,])
+        #     
+        #     p <- ggplot(df, aes(x, mle)) + geom_line(size = 1) +
+        #         geom_ribbon(aes(ymin = low, ymax = upp), alpha = 0.25)
+        #     
+        #     return(p)
+        # }
     ),
     
     private = list(
