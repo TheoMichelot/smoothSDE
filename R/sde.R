@@ -77,6 +77,9 @@ SDE <- R6Class(
                               paste(names(invlink), collapse = ", "))
                 stop(err)
             }
+            if(any(sapply(forms[fixpar], function(f) f != ~1))){
+                stop("formulas should be ~1 for fixed parameters")
+            }
             
             # Check that data has an "ID" column, and that it's a factor
             if(!any(colnames(data) == "ID")) {
