@@ -49,7 +49,7 @@ SDE <- R6Class(
                             "BM" = list(mu = identity, sigma = log),
                             "BM-t" = list(mu = identity, sigma = log),
                             "OU" = as.list(c(mu = lapply(1:n_dim, function(i) identity), 
-                                             beta = log, sigma = log)),
+                                             tau = log, kappa = log)),
                             "CTCRW" = list(beta = log, sigma = log),
                             "ESEAL_SSM" = list(mu = identity, sigma = log))
             
@@ -58,7 +58,7 @@ SDE <- R6Class(
                                "BM" = list(mu = identity, sigma = exp),
                                "BM-t" = list(mu = identity, sigma = exp),
                                "OU" = as.list(c(mu = lapply(1:n_dim, function(i) identity), 
-                                                beta = exp, sigma = exp)),
+                                                tau = exp, kappa = exp)),
                                "CTCRW" = list(beta = exp, sigma = exp),
                                "ESEAL_SSM" = list(mu = identity, sigma = exp))
             
@@ -254,7 +254,7 @@ SDE <- R6Class(
             switch (self$type(),
                     "BM" = "dZ(t) = mu dt + sigma dW(t)",
                     "BM-t" = "Brownian motion with t-distributed noise",
-                    "OU" = "dZ(t) = beta (mu - Z(t)) dt + sigma dW(t)",
+                    "OU" = "dZ(t) = 1/tau (mu - Z(t)) dt + sqrt(2*kappa/tau) dW(t)",
                     "CTCRW" = paste0("dV(t) = - beta V(t) dt + sigma dW(t)\n", 
                                      "dZ(t) = V(t) dt"),
                     "ESEAL_SSM" = paste0("dL(t) = mu dt + sigma dW(t)\n", 
@@ -1086,10 +1086,10 @@ SDE <- R6Class(
             } else if(self$type() == "OU") {
                 # Need to account for case where mu has several dimensions
                 mu <- par[-end_ind, which(substr(colnames(par), 1, 2) == "mu")]
-                beta <- par[-end_ind, "beta"]
-                sigma <- par[-end_ind, "sigma"]
-                mean <-  mu + exp(- beta * dtimes) * (Z[-end_ind,] - mu)
-                sd <- sigma/sqrt(2 * beta) * sqrt(1 - exp(-2 * beta * dtimes))
+                tau <- par[-end_ind, "tau"]
+                kappa <- par[-end_ind, "kappa"]
+                mean <-  mu + exp(- dtimes/tau) * (Z[-end_ind,] - mu)
+                sd <- sqrt(kappa * (1 - exp(-2 * dtimes / tau)))
             } else {
                 stop(paste("Residuals not implemented for model", self$type()))
             }
@@ -1179,17 +1179,17 @@ SDE <- R6Class(
                 
                 if(self$type() == "BM") {
                     # If BM, generate all increments directly
-                    mean <- sub_par[-sub_n, 1] * dtimes
-                    sd <- sub_par[-sub_n, 2] * sqrt(dtimes)
+                    mean <- sub_par[-sub_n, "mu"] * dtimes
+                    sd <- sub_par[-sub_n, "sigma"] * sqrt(dtimes)
                     sub_obs <- cumsum(c(z0, rnorm(sub_n - 1, mean = mean, sd = sd)))
                 } else if(self$type() == "OU") {
                     # If OU, loop over observation times
                     for(i in 2:sub_n) {
                         # Generate observation from OU transition density
-                        mean <- exp(-sub_par[i-1, 2] * dtimes[i-1]) * sub_obs[i-1] +
-                            (1 - exp(-sub_par[i-1, 2] * dtimes[i-1])) * sub_par[i-1, 1]
-                        sd <- sub_par[i-1, 3] / sqrt(2 * sub_par[i-1, 2]) * 
-                            sqrt(1 - exp(-2*sub_par[i-1, 2]*dtimes[i-1]))
+                        mean <- exp(- dtimes[i-1] / sub_par[i-1, "tau"]) * sub_obs[i-1] +
+                            (1 - exp(-dtimes[i-1] / sub_par[i-1, "tau"])) * sub_par[i-1, "mu"]
+                        sd <- sqrt(sub_par[i-1, "kappa"] * 
+                            (1 - exp(-2 * dtimes[i-1] / sub_par[i-1, "tau"])))
                         sub_obs[i] <- rnorm(n = 1, mean = mean, sd = sd)
                     }
                 } else {

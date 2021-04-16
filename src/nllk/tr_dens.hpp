@@ -43,11 +43,12 @@ Type tr_dens(vector<Type> Z1, vector<Type> Z0, Type dtimes, vector<Type> par,
                 Type scale = sd/sqrt(df/(df-2));
                 res = res + dt((Z1(i)-Z0(i)-mean)/scale, df, true) - log(scale);
             } else if(type == "OU") {
-                // Ornstein-Uhlenbeck: dZ_t = beta(t) (mu(t) - Z_t) dt + sigma(t) dW_t
-                // where par = mu_1, mu_2, ..., mu_d, log(beta), log(sigma)
-                mean = par(i) + exp(- exp(par(n_dim)) * dtimes) * (Z0(i) - par(i));
-                sd = exp(par(n_dim+1))/sqrt(2 * exp(par(n_dim))) * 
-                    sqrt(1 - exp(-2 * exp(par(n_dim)) * dtimes));
+                // Ornstein-Uhlenbeck: 
+                // dZ_t = 1/tau(t) (mu(t) - Z_t) dt + sqrt(2*a(t)/tau(t)) dW_t
+                // where par = mu_1, mu_2, ..., mu_d, log(tau), log(a)
+                mean = par(i) + exp(- dtimes/exp(par(n_dim))) * (Z0(i) - par(i));
+                sd = sqrt(exp(par(n_dim+1)) * 
+                    (1 - exp(-2 * dtimes / exp(par(n_dim)))));
                 res = res + dnorm(Z1(i), mean, sd, true);
             }            
         }
