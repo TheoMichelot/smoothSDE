@@ -1,7 +1,7 @@
 all: smoothSDE.dll
 
 smoothSDE.dll: smoothSDE.cpp
-	$(R_HOME)/bin/Rscript --vanilla -e "TMB::compile('smoothSDE.cpp','-O0 -g', safebounds=FALSE)"
-	
+	$(R_HOME)/bin/Rscript --vanilla -e "TMB::compile('smoothSDE.cpp', '-O1 -g',DLLFLAGS='', safebounds=FALSE, safeunload=FALSE)"
+
 clean:
-	rm -rf *o 
+	rm -rf *.dll
