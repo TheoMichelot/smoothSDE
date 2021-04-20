@@ -77,7 +77,7 @@ SDE <- R6Class(
                               paste(names(invlink), collapse = ", "))
                 stop(err)
             }
-            if(any(sapply(forms[fixpar], function(f) f != ~1))){
+            if(any(sapply(self$formulas()[fixpar], function(f) f != ~1))) {
                 stop("formulas should be ~1 for fixed parameters")
             }
             
