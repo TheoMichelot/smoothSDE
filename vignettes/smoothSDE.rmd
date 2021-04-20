@@ -1,8 +1,10 @@
 ---
-title: "**smoothSDE vignette**"
+title: "**Flexible stochastic differential equation estimation with smoothSDE**"
 author: "Théo Michelot"
 date: "`r Sys.Date()`"
 output:
+  bookdown::pdf_document2:
+    toc: false
   pdf_document:
     number_sections: yes
   html_document:
@@ -15,6 +17,9 @@ vignette: >
 editor_options: 
   chunk_output_type: console
 tables: true
+header-includes:
+  \renewcommand{\baselinestretch}{1.2}
+fontsize: 12pt
 ---
 
 ```{r setup, include = FALSE}
@@ -40,35 +45,160 @@ The R package smoothSDE implements varying-coefficient versions of several popul
 
 ## Varying-coefficient stochastic differential equations
 
-Varying-coefficient SDEs, and the inferential method implemented in smoothSDE, are described by @michelot2020. The main model formulations currently implemented in the package are described in the following table.
+Varying-coefficient SDEs, and the inferential method implemented in smoothSDE, are described by @michelot2021. The main model formulations currently implemented in the package are Brownian motion, Ornstein-Uhlenbeck process, and continuous-time correlated random walk. Brownian motion and the Ornstein-Uhlenbeck process have a wide range of applications (e.g., ecology, finance), and the continuous-time correlated random walk is a popular model of animal movement described by @johnson2008. The package supports multivariate isotropic processes, i.e., with the same set of parameters describing the dynamics in each dimension.
 
 \begin{tabular}{lllll}
 \toprule
-Model                                  & Name    & Parameters &                              & Link functions \\
+Model                         & Name    & Parameters &                              & Link functions \\
 \midrule
-Brownian motion                        & "BM"    & drift      & $\mu \in (-\infty, +\infty)$ & identity \\
-                                       &         & diffusion  & $\sigma > 0$                 & log \\
+Brownian motion               & ``\texttt{BM}''    & drift      & $\mu \in (-\infty, +\infty)$ & identity \\
+                              &         & diffusion  & $\sigma > 0$                 & log \\
 \midrule
-Ornstein-Uhlenbeck process             & "OU"    & mean       & $\mu \in (-\infty, +\infty)$ & identity \\
-                                       &         & reversion  & $\beta > 0$                  & log \\
-                                       &         & diffusion  & $\sigma > 0$                 & log \\
+Ornstein-Uhlenbeck process    & ``\texttt{OU}''    & mean       & $\mu \in (-\infty, +\infty)$ & identity \\
+                              &         & time scale & $\tau > 0$                  & log \\
+                              &         & variance  & $\kappa > 0$                 & log \\
 \midrule
-Continuous-time correlated random walk & "CTCRW" & reversion  & $\beta > 0$                  & log \\
+Continuous-time correlated RW & ``\texttt{CTCRW}'' & reversion  & $\beta > 0$                  & log \\
                                        &         & diffusion  & $\sigma > 0$                 & log \\
 \bottomrule
 \end{tabular}
 
-<!-- | Model                                  | Name        | Parameters |                              | Link functions | -->
-<!-- |----------------------------------------|-------------|------------|------------------------------|----------------| -->
-<!-- | Brownian motion                        | "BM"        | drift      | $\mu \in (-\infty, +\infty)$ | identity       | -->
-<!-- |                                        |             | diffusion  | $\sigma > 0$                 | log            | -->
-<!-- | Ornstein-Uhlenbeck process             | "OU"        | mean       | $\mu \in (-\infty, +\infty)$ | identity       | -->
-<!-- |                                        |             | reversion  | $\beta > 0$                  | log            | -->
-<!-- |                                        |             | diffusion  | $\sigma > 0$                 | log            | -->
-<!-- | Continuous-time correlated random walk | "CTCRW"     | reversion  | $\beta > 0$                  | log            | -->
-<!-- |                                        |             | diffusion  | $\sigma > 0$                 | log            | -->
+## Brownian motion
 
-Brownian motion and the Ornstein-Uhlenbeck process have a wide range of applications (e.g., ecology, finance), and the continuous-time correlated random walk is a popular model of animal movement described by @johnson2008. The package supports multivariate isotropic processes, i.e., with the same set of parameters describing the dynamics in each dimension. 
+Varying-coefficient Brownian motion (with drift) is the process $(Z_t)$ defined as the solution to
+$$
+dZ_t = \mu_t\ dt + \sigma_t\ dW_t,
+$$
+where $\mu_t \in \mathbb{R}$ is the drift parameter (expected direction of change), and $\sigma_t > 0$ is the diffusion parameter (variability).
+
+The approximate transition density of this model is
+$$
+Z_{t_1} \vert \{ Z_{t_0} = z_0 \} \sim N \left[ z_0 + \mu_{t_0} \Delta,\ \sigma_{t_0}^2 \Delta \right],
+$$
+where $\Delta = t_1 - t_0$ is the time interval.
+
+Figure \@ref(fig:sim-bm) shows simulated trajectories from 1-dimensional and 2-dimensional Brownian motion (with constant parameters).
+
+```{r sim-bm, echo = FALSE, fig.width = 6, fig.height = 4, out.width="49%", fig.align = "center", fig.show="hold", fig.cap = "Illustration of 1d and 2d (isotropic) Brownian motion."}
+n <- 500
+times <- seq(0, 100, length = n)
+dx <- rnorm(n)
+x <- cumsum(dx)
+dxy <- matrix(rnorm(2*n), nrow = n)
+xy <- apply(dxy, 2, cumsum)
+
+df1 <- data.frame(time = times, Z = x)
+df2 <- data.frame(time = times, Z1 = xy[, 1], Z2 = xy[, 2])
+
+ggplot(df1, aes(time, Z)) + geom_line()
+ggplot(df2, aes(Z1, Z2)) + geom_path() + coord_equal()
+```
+
+## Ornstein-Uhlenbeck
+
+The Ornstein-Uhlenbeck (OU) process is usually described as the solution to
+$$
+dZ_t = \beta_t (\mu_t - Z_t)\ dt + \sigma_t\ dt,
+$$
+where $\mu_t \in \mathbb{R}$ is the long-term mean, $\beta_t > 0$ is the strength of reversion to the mean, and $\sigma_t > 0$ is the diffusion parameter. 
+
+In our experience, the parameterisation shown above suffers from identifiability issues. In `smoothSDE`, the varying-coefficient OU process is therefore specified as the solution to
+$$
+dZ_t = \frac{1}{\tau_t} (\mu_t - Z_t)\ dt + \sqrt{\frac{2\kappa_t}{\tau_t}}\ dt,
+$$
+where $\mu_t$ has the same interpretation as before, $\tau_t > 0$ measures the time scale of autocorrelation of the process, and $\kappa_t > 0$ is the long-term variance of the process. The following formulas can be used to go from one parameterisation to the other:
+$$
+\begin{cases}
+\beta_t = \frac{1}{\tau_t} \\
+\sigma_t = \sqrt{\frac{2 \kappa_t}{\tau_t}}
+\end{cases}
+\Leftrightarrow
+\begin{cases}
+\tau_t = \frac{1}{\beta_t} \\
+\kappa_t = \frac{\sigma_t^2}{2\beta_t}
+\end{cases}
+$$
+
+The approximate transition density of the varying-coefficient OU process is
+$$
+Z_{t_1} \vert \{ Z_{t_0} = z_0 \} \sim 
+  N \left[ 
+    e^{- \Delta / \tau_t} z_0 + (1 - e^{- \Delta / \tau_t}) \mu_t,\ 
+    \kappa_t (1 - e^{-2 \Delta / \tau_t}) 
+  \right].
+$$
+From this, we see that the stationary distribution of the process (obtained when $\Delta \rightarrow \infty$) is
+$$
+Z_t \sim N(\mu_t,\ \kappa_t).
+$$
+
+Simulations from the standard OU process (with constant parameters) are shown in Figure \@ref(fig:sim-ou) for illustration. The process oscillates around its long-term mean.
+
+```{r sim-ou, echo = FALSE, fig.width = 5, fig.height = 4, out.width="49%", fig.align = "center", fig.show="hold", fig.cap = "Illustration of 1d and 2d (isotropic) Ornstein-Uhlenbeck process. The mean of the process is shown as a horizontal dotted line in the 1-d example, and as a red point in the 2-d example."}
+n <- 500
+times <- seq(0, 100, length = n)
+mu <- c(5, -3)
+beta <- 0.1
+sigma <- 1
+
+Z1 <- rep(5, n)
+Z2 <- rep(-3, n)
+sd <- sigma/sqrt(2*beta) * sqrt(1 - exp(-2 * beta))
+# Iterate through observations
+for(i in 1:(n-1)) {
+  mean1 <- exp(-beta) * Z1[i] + (1 - exp(-beta)) * mu[1]
+  mean2 <- exp(-beta) * Z2[i] + (1 - exp(-beta)) * mu[2]
+  Z1[i+1] <- rnorm(1, mean = mean1, sd = sd)
+  Z2[i+1] <- rnorm(1, mean = mean2, sd = sd)
+}
+
+df1 <- data.frame(time = times, Z = Z1)
+df2 <- data.frame(time = times, Z1 = Z1, Z2 = Z2)
+
+ggplot(df1, aes(time, Z)) + geom_line() + geom_hline(yintercept = 5, lty = 2, col = "firebrick")
+ggplot(df2, aes(Z1, Z2)) + geom_path() + coord_equal() + 
+  geom_point(aes(Z1, Z2), data.frame(Z1 = 5, Z2 = -3), col = "firebrick", size = 2)
+```
+
+## Continuous-time correlated random walk
+
+The varying-coefficient continuous-time correlated random walk (CTCRW), described by @johnson2008, is the process $(Z_t)$ solution to
+$$
+\begin{cases}
+dZ_t = V_t\ dt \\
+dV_t = -\beta_t V_t\ dt + \sigma_t\ dW_t.
+\end{cases}
+$$
+In animal movement analyses, $Z_t$ usually denotes the location of the animal at time $t$, and $V_t$ is its velocity. The velocity $V_t$ is modelled with an OU process to capture autocorrelation in speed and direction of movement, and the location $Z_t$ is its integral, i.e.\ $Z_t = \int_{s = 0}^t V_s\ ds$. The parameters of the velocity process are $\beta_t > 0$, the strength of reversion to the mean, and $\sigma_t > 0$, the variability of the velocity.
+
+Simulated examples of the CTCRW process are shown in Figure \@ref(fig:sim-ctcrw). Compared to Brownian motion, realisations of the CTCRW are smooth and display persistence in the direction and speed of change.
+
+```{r sim-ctcrw, echo = FALSE, fig.width = 5, fig.height = 4, out.width="49%", fig.align = "center", fig.show="hold", fig.cap = "Illustration of 1d and 2d (isotropic) continuous-time correlated random walk."}
+n <- 500
+times <- seq(0, 100, length = n)
+beta <- 0.1
+sigma <- 1
+
+V1 <- rep(5, n)
+V2 <- rep(-3, n)
+sd <- sigma/sqrt(2*beta) * sqrt(1 - exp(-2 * beta))
+# Iterate through observations
+for(i in 1:(n-1)) {
+  mean1 <- exp(-beta) * V1[i]
+  mean2 <- exp(-beta) * V2[i]
+  V1[i+1] <- rnorm(1, mean = mean1, sd = sd)
+  V2[i+1] <- rnorm(1, mean = mean2, sd = sd)
+}
+
+Z1 <- cumsum(V1)
+Z2 <- cumsum(V2)
+
+df1 <- data.frame(time = times, Z = Z1)
+df2 <- data.frame(time = times, Z1 = Z1, Z2 = Z2)
+
+ggplot(df1, aes(time, Z)) + geom_line()
+ggplot(df2, aes(Z1, Z2)) + geom_path() + coord_equal()
+```
 
 ## SDE class
 
@@ -132,14 +262,24 @@ bm$plot_par("time", n_post = 100)
 The smoothing splines captured the oscillating patterns in the diffusion parameter, and the drift parameter was slightly underestimated. We can also evaluate the SDE parameters on a grid of covariate values, to compare directly to the true parameters.
 
 ```{r ex1-par, fig.width = 6, fig.height = 3, out.width="90%", fig.align = "center"}
-bm_par <- bm$predict_par(new_data = data)
+# Get point estimates and CIs for sigma over time
+bm_par <- bm$predict_par(new_data = data, CI = TRUE)
+
+# Data frame for point estimates
 bm_par_df <- data.frame(time = times,
-                        sigma = c(sigma, bm_par[, "sigma"]),
+                        sigma = c(sigma, bm_par$estimate[, "sigma"]),
                         type = rep(c("true", "estimated"), each = n))
+
+# Data frame for CIs
+bm_ci_df <- data.frame(time = times,
+                       low = bm_par$low[,"sigma"],
+                       upp = bm_par$upp[,"sigma"])
 
 ggplot(bm_par_df, aes(time, sigma, col = type)) +
   scale_color_manual(values = c("firebrick", "royalblue"), name = "") +
-  geom_line(size = 1)
+  geom_line(size = 1) +
+  geom_line(aes(time, low), data = bm_ci_df, col = "firebrick", lty = 2) +
+  geom_line(aes(time, upp), data = bm_ci_df, col = "firebrick", lty = 2)
 ```
 
 We can simulate from the fitted model with the method `simulate` (only available for Brownian motion and Ornstein-Uhlenbeck models for now), for example to assess whether the model captures relevant features of the observed data. 
@@ -157,19 +297,19 @@ Similarly to the observed time series, the simulated process alternates between 
 
 We present a second simulated example, based on a varying-coefficient Ornstein-Uhlenbeck (OU) process. We generate 1000 observations from a 2-dimensional isotropic OU process with constant mean (`mu`), constant mean reversion (`beta`), and time-varying diffusion (`sigma`). In this example, the parameters are selected such that the diffusion (and therefore the variance of the process around its mean) decreases in time.
 
-```{r ex2-sim, fig.width = 6, fig.height = 3, out.width="80%", fig.align = "center"}
+```{r ex2-sim, fig.width = 6, fig.height = 5, out.width="70%", fig.align = "center"}
 # Mean parameter (centre of attraction)
 mu <- matrix(rep(c(5, -5), each = n), ncol = 2)
-# Mean reversion parameter
-beta <- rep(0.5, n)
-# Time-varying diffusion parameter
-sigma <- plogis(-(times-500)/100)
+# Time scale of autocorrelation
+tau <- rep(2, n)
+# Time-varying variance parameter
+kappa <- plogis(-(times-500)/100)
 
 # Simulate OU process over 1000 time steps
 Z <- mu
 for(i in 2:n) {
-    mean <- exp(-beta[i-1]) * Z[i-1,] + (1 - exp(-beta[i-1])) * mu[i-1,]
-    sd <- sigma[i-1] / sqrt(2*beta[i-1]) * sqrt(1 - exp(-2 * beta[i-1]))
+    mean <- exp(-1/tau[i-1]) * Z[i-1,] + (1 - exp(-1/tau[i-1])) * mu[i-1,]
+    sd <- sqrt(kappa[i-1]) * sqrt(1 - exp(-2 / tau[i-1]))
     Z[i,] <- rnorm(2, mean, sd)
 }
 
@@ -186,15 +326,15 @@ ggplot(data, aes(Z1, Z2, col = time)) +
     scale_color_viridis_c()
 ```
 
-Like in the previous example, we specify the model for the OU parameters with a list of formulas. There are four parameters: `mu1` (mean in first dimension), `mu2` (mean in second dimension), `beta` (mean reversion) and `sigma` (diffusion). In this example, we assume that the mean parameter is known, and we therefore use the option `fixpar = c("mu1", "mu2")` to indicate that it should not be estimated, and we add the argument `par0` to give the known mean parameter (and initial values for the other parameters). We pass a vector of length 2 for `response`, to indicate that we want to model the two variables with a 2-dimensional isotropic OU process.
+Like in the previous example, we specify the model for the OU parameters with a list of formulas. There are four parameters: `mu1` (mean in first dimension), `mu2` (mean in second dimension), `tau` (time scale of autocorrelation) and `kappa` (variance). In this example, we assume that the mean parameter is known, and we therefore use the option `fixpar = c("mu1", "mu2")` to indicate that it should not be estimated, and we add the argument `par0` to give the known mean parameter (and initial values for the other parameters). We pass a vector of length 2 for `response`, to indicate that we want to model the two variables with a 2-dimensional isotropic OU process.
 
 ```{r ex2-fit}
 formulas <- list(mu1 = ~1,
                  mu2 = ~1,
-                 beta = ~1,
-                 sigma = ~s(time, k = 10, bs = "ts"))
+                 tau = ~1,
+                 kappa = ~s(time, k = 10, bs = "ts"))
 
-par0 <- c(mu1 = 5, mu2 = -5, beta = 1, sigma = 3)
+par0 <- c(mu1 = 5, mu2 = -5, tau = 1, kappa = 3)
 
 ou <- SDE$new(formulas = formulas, 
               data = data, 
@@ -209,23 +349,34 @@ ou$fit()
 We can visualise the results to check that the estimated parameters correctly captured the true parameters used in the simulation.
 
 ```{r ex2-plot, fig.width = 8, fig.height = 3, out.width="100%"}
-ou$plot_par("time", n_post = 100)
+# Plot tau and kappa against time
+ou$plot_par("time", par_names = c("tau", "kappa"))
 
-ou_par <- ou$predict_par(new_data = data)
+# Point estimates and CIs for kappa over time
+ou_par <- ou$predict_par(new_data = data, CI = TRUE)
+
+# Data frame for point estimates
 ou_par_df <- data.frame(time = times,
-                        sigma = c(sigma, ou_par[, "sigma"]),
+                        kappa = c(kappa, ou_par$estimate[, "kappa"]),
                         type = rep(c("true", "estimated"), each = n))
 
-ggplot(ou_par_df, aes(time, sigma, col = type)) +
+# Data frame for CIs
+ou_ci_df <- data.frame(time = times,
+                       low = ou_par$low[, "kappa"],
+                       upp = ou_par$upp[, "kappa"])
+
+ggplot(ou_par_df, aes(time, kappa, col = type)) +
   scale_color_manual(values = c("firebrick", "royalblue"), name = "") +
-  geom_line(size = 1)
+  geom_line(size = 1) +
+  geom_line(aes(time, low), data = ou_ci_df, col = "firebrick", lty = 2) +
+  geom_line(aes(time, upp), data = ou_ci_df, col = "firebrick", lty = 2)
 ```
 
-The decreasing diffusion parameter seems to be captured well by the model.
+The decreasing variance parameter seems to be captured well by the model.
 
 # Example 3: elephant movement analysis
 
-The following code can be used to fit the varying-coefficient CTCRW model to elephant GPS data from @wall2014, as described in Section 3.2 of @michelot2020.
+The following code can be used to fit the varying-coefficient CTCRW model to elephant GPS data from @wall2014, as described in Section 3.2 of @michelot2021.
 
 We first download the data from the Movebank data repository, and keep the relevant rows and columns. Note that the CTCRW model requires projected Easting-Northing locations (rather than longitude-latitude), so that's what we are working with here.
 ```{r example-prep}
@@ -302,7 +453,7 @@ Finally, the relationship between the SDE parameters and the covariates can be p
 my_sde$plot_par("temp", n_post = 100)
 ```
 
-As described by @michelot2020, these results suggest that this elephant tended to move less at high temperatures, with a big drop in speed over 40 degrees Celsius. Estimates and point-wise confidence intervals of the SDE parameters can also be computed for given covariate values, using the `predict_par` method.
+As described by @michelot2021, these results suggest that this elephant tended to move less at high temperatures, with a big drop in speed over 40 degrees Celsius. Estimates and point-wise confidence intervals of the SDE parameters can also be computed for given covariate values, using the `predict_par` method.
 
 ``` {r example-predict}
 # Data frame with covariate values for prediction
