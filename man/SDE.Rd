@@ -10,42 +10,6 @@ R6 class for stochastic differential equation
 }
 \details{
 Contains the model formulas and data.
-
-This function transforms the smoothness parameter of
-each smooth term into a standard deviation, given by 
-SD = 1/sqrt(lambda). It is particularly helpful to get the
-standard deviations of independent normal random effects.
-
-The design matrix is obtained by taking X_re (returned by 
-make_mat), and multiplying the relevant columns by something like
-exp(-rho * time) to force the splines to decay to zero with a rate
-determined by rho.
-
-
-This creates an attribute \code{tmb_obj}, which can be used to 
-evaluate the negative log-likelihood function.
-
-
-The negative log-likelihood of the model is minimised using the
-function \code{optim}. TMB uses the Laplace approximation to integrate 
-the random effects out of the likelihood.
-
-After the model has been fitted, the output of \code{optim} can be
-accessed using the method \code{res}.
-
-
-This uses fairly naive substring matching using grep, and may not work
-if one covariate's name is a substring of another one.
-
-
-This method generates pointwise confidence intervals 
-by simulation. That is, it generates \code{n_post} posterior samples 
-of the estimated parameters from a multivariate normal distribution,
-where the mean is the vector of estimates and the covariance matrix 
-is provided by TMB (using \code{\link{post_par}}). Then, the SDE 
-parameters are derived for each set of posterior parameter values, 
-and pointwise confidence intervals are obtained as quantiles of the 
-posterior simulated SDE parameters.
 }
 \section{Methods}{
 \subsection{Public methods}{
@@ -263,6 +227,11 @@ Smoothness parameters
 \if{latex}{\out{\hypertarget{method-vcomp}{}}}
 \subsection{Method \code{vcomp()}}{
 Variance components of smooth terms
+
+This function transforms the smoothness parameter of
+each smooth term into a standard deviation, given by 
+SD = 1/sqrt(lambda). It is particularly helpful to get the
+standard deviations of independent normal random effects.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{SDE$vcomp()}\if{html}{\out{</div>}}
 }
@@ -351,6 +320,11 @@ Print equation for this model
 \if{latex}{\out{\hypertarget{method-X_re_decay}{}}}
 \subsection{Method \code{X_re_decay()}}{
 Get design matrix for random effects in decay model
+
+The design matrix is obtained by taking X_re (returned by 
+make_mat), and multiplying the relevant columns by something like
+exp(-rho * time) to force the splines to decay to zero with a rate
+determined by rho.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{SDE$X_re_decay()}\if{html}{\out{</div>}}
 }
@@ -516,6 +490,9 @@ plus a data frame of covariates values.
 \if{latex}{\out{\hypertarget{method-setup}{}}}
 \subsection{Method \code{setup()}}{
 TMB setup
+ 
+This creates an attribute \code{tmb_obj}, which can be used to 
+evaluate the negative log-likelihood function.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{SDE$setup(silent = TRUE, map = NULL)}\if{html}{\out{</div>}}
 }
@@ -535,6 +512,13 @@ TMB setup
 \if{latex}{\out{\hypertarget{method-fit}{}}}
 \subsection{Method \code{fit()}}{
 Model fitting
+
+The negative log-likelihood of the model is minimised using the
+function \code{optim}. TMB uses the Laplace approximation to integrate 
+the random effects out of the likelihood.
+
+After the model has been fitted, the output of \code{optim} can be
+accessed using the method \code{res}.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{SDE$fit(silent = TRUE, map = NULL)}\if{html}{\out{</div>}}
 }
@@ -597,6 +581,9 @@ column for each SDE parameter
 \if{latex}{\out{\hypertarget{method-get_term}{}}}
 \subsection{Method \code{get_term()}}{
 Extract effect of one term
+
+This uses fairly naive substring matching using grep, and may not work
+if one covariate's name is a substring of another one.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{SDE$get_term(
   term,
@@ -713,7 +700,16 @@ error, but increase computation time. Defaults to 1000.}
 
 \item{\code{resp}}{Logical (default: TRUE). Should the output be on 
 the response scale? If FALSE, the output is on the linear 
-predictor scale.}
+predictor scale.
+
+This method generates pointwise confidence intervals 
+by simulation. That is, it generates \code{n_post} posterior samples 
+of the estimated parameters from a multivariate normal distribution,
+where the mean is the vector of estimates and the covariance matrix 
+is provided by TMB (using \code{\link{post_par}}). Then, the SDE 
+parameters are derived for each set of posterior parameter values, 
+and pointwise confidence intervals are obtained as quantiles of the 
+posterior simulated SDE parameters.}
 }
 \if{html}{\out{</div>}}
 }

@@ -195,7 +195,7 @@ SDE <- R6Class(
         
         #' @description Variance components of smooth terms
         #' 
-        #' @details This function transforms the smoothness parameter of
+        #' This function transforms the smoothness parameter of
         #' each smooth term into a standard deviation, given by 
         #' SD = 1/sqrt(lambda). It is particularly helpful to get the
         #' standard deviations of independent normal random effects.
@@ -264,7 +264,7 @@ SDE <- R6Class(
         
         #' @description Get design matrix for random effects in decay model
         #' 
-        #' @details The design matrix is obtained by taking X_re (returned by 
+        #' The design matrix is obtained by taking X_re (returned by 
         #' make_mat), and multiplying the relevant columns by something like
         #' exp(-rho * time) to force the splines to decay to zero with a rate
         #' determined by rho.
@@ -507,7 +507,7 @@ SDE <- R6Class(
         
         #' @description TMB setup
         #'  
-        #' @details This creates an attribute \code{tmb_obj}, which can be used to 
+        #' This creates an attribute \code{tmb_obj}, which can be used to 
         #' evaluate the negative log-likelihood function.
         #' 
         #' @param silent Logical. If TRUE, all tracing outputs are hidden (default).
@@ -648,7 +648,7 @@ SDE <- R6Class(
         
         #' @description Model fitting
         #' 
-        #' @details The negative log-likelihood of the model is minimised using the
+        #' The negative log-likelihood of the model is minimised using the
         #' function \code{optim}. TMB uses the Laplace approximation to integrate 
         #' the random effects out of the likelihood.
         #' 
@@ -762,7 +762,7 @@ SDE <- R6Class(
         
         #' @description Extract effect of one term
         #' 
-        #' @details This uses fairly naive substring matching using grep, and may not work
+        #' This uses fairly naive substring matching using grep, and may not work
         #' if one covariate's name is a substring of another one.
         #' 
         #' @param term Name of term as character string, e.g. "time", 
@@ -939,7 +939,7 @@ SDE <- R6Class(
         #' the response scale? If FALSE, the output is on the linear 
         #' predictor scale.
         #' 
-        #' @details This method generates pointwise confidence intervals 
+        #' This method generates pointwise confidence intervals 
         #' by simulation. That is, it generates \code{n_post} posterior samples 
         #' of the estimated parameters from a multivariate normal distribution,
         #' where the mean is the vector of estimates and the covariance matrix 
