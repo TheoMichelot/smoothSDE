@@ -933,66 +933,31 @@ SDE <- R6Class(
         #' intervals are calculated. Larger values will reduce approximation
         #' error, but increase computation time. Defaults to 1000.
         #' 
-        #' @details This method generates confidence intervals by simulation.
-        #' That is, it generates \code{n_post} posterior samples of 
-        #' the estimated parameters from a multivariate normal distribution,
+        #' @details This method generates pointwise confidence intervals 
+        #' by simulation. That is, it generates \code{n_post} posterior samples 
+        #' of the estimated parameters from a multivariate normal distribution,
         #' where the mean is the vector of estimates and the covariance matrix 
-        #' is provided by TMB. Then, transition probabilities are derived for 
-        #' each set of posterior parameter values, and confidence intervals
-        #' are obtained as quantiles of the posterior simulated transition
-        #' probabilities.
+        #' is provided by TMB (using \code{\link{post_par}}). Then, the SDE 
+        #' parameters are derived for each set of posterior parameter values, 
+        #' and pointwise confidence intervals are obtained as quantiles of the 
+        #' posterior simulated SDE parameters.
         #' 
         #' @return List with elements:
         #' \itemize{
         #'   \item{\code{low}}{Matrix of lower bounds of confidence intervals.}
         #'   \item{\code{upp}}{Matrix of upper bounds of confidence intervals.}
         #' }
-        CI = function(X_fe, X_re, level = 0.95, n_post = 1e3) {
-            # Number of states
-            n_par <- length(self$formulas())
-            # Number of time steps
-            n_grid <- nrow(X_fe)/n_par
+        CI = function(X_fe, X_re, level = 0.95, n_post = 1e3, resp = TRUE) {
+            # Posterior samples of SDE parameters
+            post_par <- self$post_par(X_fe = X_fe, X_re = X_re, n_post = n_post)
             
-            # Get parameter estimates and covariance matrix
-            rep <- self$tmb_rep()
-            if(is.null(rep$jointPrecision)) {
-                par <- rep$par.fixed
-                V <- rep$cov.fixed    
-            } else {
-                par <- c(rep$par.fixed, rep$par.random)
-                V <- solve(rep$jointPrecision)
-            }
-            
-            # Generate samples from MVN estimator distribution
-            post <- rmvn(n = n_post, mu = par, V = V)
-            
-            # Split up simulated coefficients for fixed and random effects
-            wh_fixed <- self$ind_fixcoeff()
-            if(length(wh_fixed) > 0) {
-                # If any fixed parameter, use fixed value
-                post_coeff_fe <- matrix(NA, nrow = nrow(post), ncol = length(self$coeff_fe()))
-                post_coeff_fe[, -wh_fixed] <- post[, which(colnames(post) == "coeff_fe")]
-                post_coeff_fe[, wh_fixed] <- rep(self$coeff_fe()[wh_fixed], each = n_post)                
-            } else {
-                post_coeff_fe <- post[, which(colnames(post) == "coeff_fe")]
-            }
-            post_coeff_re <- post[, which(colnames(post) == "coeff_re")]
-            
-            # Get SDE parameters over rows of X_fe and X_re, for each 
-            # posterior sample of coeff_fe and coeff_re
-            post_par <- sapply(1:n_post, function(i) {
-                self$par(t = "all", X_fe = X_fe, X_re = X_re, 
-                         coeff_fe = post_coeff_fe[i,], 
-                         coeff_re = post_coeff_re[i,])
-            })
-            
-            # Get confidence intervals as quantiles of posterior tpms
+            # Get confidence intervals as quantiles of posterior samples
             alpha <- (1 - level)/2
-            CI <- t(apply(post_par, 1, quantile, probs = c(alpha, 1 - alpha)))
+            CI <- apply(post_par, c(1, 2), quantile, probs = c(alpha, 1 - alpha))
             
             # Format matrices for lower and upper bounds
-            low <- matrix(CI[,1], ncol = n_par)
-            upp <- matrix(CI[,2], ncol = n_par)
+            low <- CI[1,,]
+            upp <- CI[2,,]
             colnames(low) <- names(self$formulas())
             colnames(upp) <- names(self$formulas())
             
