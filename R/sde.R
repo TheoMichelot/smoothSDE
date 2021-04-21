@@ -884,7 +884,10 @@ SDE <- R6Class(
         #' 
         #' @param X_fe Design matrix (fixed effects)
         #' @param X_re Design matrix (random effects)
-        #' @param n_post Number of posterior draws
+        #' @param n_post Number of posterior draws (default: 100)
+        #' @param resp Logical (default: TRUE). Should the output be on 
+        #' the response scale? If FALSE, the output is on the linear 
+        #' predictor scale.
         #' 
         #' @return Array with one row for each time step, one column for
         #' each SDE parameter, and one layer for each posterior draw
@@ -932,6 +935,9 @@ SDE <- R6Class(
         #' @param n_post Number of posterior samples from which the confidence
         #' intervals are calculated. Larger values will reduce approximation
         #' error, but increase computation time. Defaults to 1000.
+        #' @param resp Logical (default: TRUE). Should the output be on 
+        #' the response scale? If FALSE, the output is on the linear 
+        #' predictor scale.
         #' 
         #' @details This method generates pointwise confidence intervals 
         #' by simulation. That is, it generates \code{n_post} posterior samples 
@@ -976,6 +982,9 @@ SDE <- R6Class(
         #' @param n_post Number of posterior samples from which the confidence
         #' intervals are calculated if \code{CI = TRUE}. Larger values will reduce 
         #' approximation error, but increase computation time. Defaults to 1000.
+        #' @param resp Logical (default: TRUE). Should the output be on 
+        #' the response scale? If FALSE, the output is on the linear 
+        #' predictor scale.
         #' 
         #' @return If \code{CI = FALSE}, returns a matrix of point estimates, 
         #' where each row corresponds to one row of \code{new_data}. If 

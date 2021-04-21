@@ -22,18 +22,30 @@ exp(-rho * time) to force the splines to decay to zero with a rate
 determined by rho.
 
 
+This creates an attribute \code{tmb_obj}, which can be used to 
+evaluate the negative log-likelihood function.
+
+
+The negative log-likelihood of the model is minimised using the
+function \code{optim}. TMB uses the Laplace approximation to integrate 
+the random effects out of the likelihood.
+
+After the model has been fitted, the output of \code{optim} can be
+accessed using the method \code{res}.
+
+
 This uses fairly naive substring matching using grep, and may not work
 if one covariate's name is a substring of another one.
 
 
-This method generates confidence intervals by simulation.
-That is, it generates \code{n_post} posterior samples of 
-the estimated parameters from a multivariate normal distribution,
+This method generates pointwise confidence intervals 
+by simulation. That is, it generates \code{n_post} posterior samples 
+of the estimated parameters from a multivariate normal distribution,
 where the mean is the vector of estimates and the covariance matrix 
-is provided by TMB. Then, transition probabilities are derived for 
-each set of posterior parameter values, and confidence intervals
-are obtained as quantiles of the posterior simulated transition
-probabilities.
+is provided by TMB (using \code{\link{post_par}}). Then, the SDE 
+parameters are derived for each set of posterior parameter values, 
+and pointwise confidence intervals are obtained as quantiles of the 
+posterior simulated SDE parameters.
 }
 \section{Methods}{
 \subsection{Public methods}{
@@ -63,7 +75,9 @@ probabilities.
 \item \href{#method-update_coeff_fe}{\code{SDE$update_coeff_fe()}}
 \item \href{#method-update_coeff_re}{\code{SDE$update_coeff_re()}}
 \item \href{#method-update_lambda}{\code{SDE$update_lambda()}}
+\item \href{#method-update_rho}{\code{SDE$update_rho()}}
 \item \href{#method-message}{\code{SDE$message()}}
+\item \href{#method-print}{\code{SDE$print()}}
 \item \href{#method-ind_fixcoeff}{\code{SDE$ind_fixcoeff()}}
 \item \href{#method-make_mat}{\code{SDE$make_mat()}}
 \item \href{#method-make_mat_grid}{\code{SDE$make_mat_grid()}}
@@ -397,12 +411,39 @@ Update smoothness parameters
 }
 }
 \if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-update_rho"></a>}}
+\if{latex}{\out{\hypertarget{method-update_rho}{}}}
+\subsection{Method \code{update_rho()}}{
+Update decay parameter
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{SDE$update_rho(new_rho)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{new_rho}}{New decay parameter vector}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-message"></a>}}
 \if{latex}{\out{\hypertarget{method-message}{}}}
 \subsection{Method \code{message()}}{
 Print SDE and parameter formulas
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{SDE$message()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-print"></a>}}
+\if{latex}{\out{\hypertarget{method-print}{}}}
+\subsection{Method \code{print()}}{
+Print SDE object
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{SDE$print()}\if{html}{\out{</div>}}
 }
 
 }
@@ -475,17 +516,16 @@ plus a data frame of covariates values.
 \if{latex}{\out{\hypertarget{method-setup}{}}}
 \subsection{Method \code{setup()}}{
 TMB setup
- 
-This creates an attribute \code{tmb_obj}, which can be used to 
-evaluate the negative log-likelihood function.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{SDE$setup(silent = TRUE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{SDE$setup(silent = TRUE, map = NULL)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{silent}}{Logical. If TRUE, all tracing outputs are hidden (default).}
+
+\item{\code{map}}{List passed to MakeADFun to fix parameters. (See TMB documentation.)}
 }
 \if{html}{\out{</div>}}
 }
@@ -495,21 +535,16 @@ evaluate the negative log-likelihood function.
 \if{latex}{\out{\hypertarget{method-fit}{}}}
 \subsection{Method \code{fit()}}{
 Model fitting
-
-The negative log-likelihood of the model is minimised using the
-function \code{optim}. TMB uses the Laplace approximation to integrate 
-the random effects out of the likelihood.
-
-After the model has been fitted, the output of \code{optim} can be
-accessed using the method \code{res}.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{SDE$fit(silent = TRUE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{SDE$fit(silent = TRUE, map = NULL)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{silent}}{Logical. If TRUE, all tracing outputs are hidden (default).}
+
+\item{\code{map}}{List passed to MakeADFun to fix parameters. See TMB documentation.}
 }
 \if{html}{\out{</div>}}
 }
@@ -563,7 +598,15 @@ column for each SDE parameter
 \subsection{Method \code{get_term()}}{
 Extract effect of one term
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{SDE$get_term(term, resp = FALSE, coeff_fe = NULL, coeff_re = NULL)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{SDE$get_term(
+  term,
+  t = "all",
+  resp = FALSE,
+  X_fe = NULL,
+  X_re = NULL,
+  coeff_fe = NULL,
+  coeff_re = NULL
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -574,6 +617,12 @@ or "s(time)"}
 
 \item{\code{resp}}{Logical (default: FALSE). If TRUE, return values
 on response scale rather than linear predictor scale.}
+
+\item{\code{X_fe}}{Optional design matrix for fixed effects. If not
+provided, defaults to design matrix from data.}
+
+\item{\code{X_re}}{Optional design matrix for random effects. If not
+provided, defaults to design matrix from data.}
 
 \item{\code{coeff_fe}}{Optional vector of fixed effect parameters}
 
@@ -614,7 +663,7 @@ posterior draw
 Posterior draws of SDE parameters (for uncertainty 
 quantification)
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{SDE$post_par(X_fe, X_re, n_post = 100)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{SDE$post_par(X_fe, X_re, n_post = 100, resp = TRUE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -624,7 +673,11 @@ quantification)
 
 \item{\code{X_re}}{Design matrix (random effects)}
 
-\item{\code{n_post}}{Number of posterior draws}
+\item{\code{n_post}}{Number of posterior draws (default: 100)}
+
+\item{\code{resp}}{Logical (default: TRUE). Should the output be on 
+the response scale? If FALSE, the output is on the linear 
+predictor scale.}
 }
 \if{html}{\out{</div>}}
 }
@@ -639,7 +692,7 @@ each SDE parameter, and one layer for each posterior draw
 \subsection{Method \code{CI()}}{
 Confidence intervals for SDE parameters
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{SDE$CI(X_fe, X_re, level = 0.95, n_post = 1000)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{SDE$CI(X_fe, X_re, level = 0.95, n_post = 1000, resp = TRUE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -657,6 +710,10 @@ intervals)}
 \item{\code{n_post}}{Number of posterior samples from which the confidence
 intervals are calculated. Larger values will reduce approximation
 error, but increase computation time. Defaults to 1000.}
+
+\item{\code{resp}}{Logical (default: TRUE). Should the output be on 
+the response scale? If FALSE, the output is on the linear 
+predictor scale.}
 }
 \if{html}{\out{</div>}}
 }
@@ -674,7 +731,13 @@ List with elements:
 \subsection{Method \code{predict_par()}}{
 Predict SDE parameters
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{SDE$predict_par(new_data = NULL, CI = FALSE, level = 0.95, n_post = 1000)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{SDE$predict_par(
+  new_data = NULL,
+  CI = FALSE,
+  level = 0.95,
+  n_post = 1000,
+  resp = TRUE
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -692,6 +755,10 @@ intervals) if \code{CI = TRUE}.}
 \item{\code{n_post}}{Number of posterior samples from which the confidence
 intervals are calculated if \code{CI = TRUE}. Larger values will reduce 
 approximation error, but increase computation time. Defaults to 1000.}
+
+\item{\code{resp}}{Logical (default: TRUE). Should the output be on 
+the response scale? If FALSE, the output is on the linear 
+predictor scale.}
 }
 \if{html}{\out{</div>}}
 }
@@ -760,7 +827,7 @@ Input data frame with extra column for simulated time series
 \subsection{Method \code{plot_par()}}{
 Plot observation parameters
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{SDE$plot_par(var, covs = NULL, n_post = 100)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{SDE$plot_par(var, par_names = NULL, covs = NULL, n_post = 100)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -768,6 +835,9 @@ Plot observation parameters
 \describe{
 \item{\code{var}}{Name of covariate as a function of which the parameters
 should be plotted}
+
+\item{\code{par_names}}{Optional vector for the names of SDE parameters to plot.
+If not specified, all parameters are plotted.}
 
 \item{\code{covs}}{Optional data frame with a single row and one column
 for each covariate, giving the values that should be used. If this is
