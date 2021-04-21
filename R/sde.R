@@ -888,7 +888,7 @@ SDE <- R6Class(
         #' 
         #' @return Array with one row for each time step, one column for
         #' each SDE parameter, and one layer for each posterior draw
-        post_par = function(X_fe, X_re, n_post = 100) {
+        post_par = function(X_fe, X_re, n_post = 100, resp = TRUE) {
             # Number of SDE parameters
             n_par <- length(self$formulas())
             # Number of time steps
@@ -913,7 +913,8 @@ SDE <- R6Class(
                 self$par(t = "all", 
                          X_fe = X_fe, X_re = X_re, 
                          coeff_fe = post_fe[i,], 
-                         coeff_re = post_re[i,])  
+                         coeff_re = post_re[i,],
+                         resp = resp)  
             }), dim = c(n, n_par, n_post))
             dimnames(par_array)[[2]] <- names(self$invlink())
             
@@ -948,7 +949,8 @@ SDE <- R6Class(
         #' }
         CI = function(X_fe, X_re, level = 0.95, n_post = 1e3, resp = TRUE) {
             # Posterior samples of SDE parameters
-            post_par <- self$post_par(X_fe = X_fe, X_re = X_re, n_post = n_post)
+            post_par <- self$post_par(X_fe = X_fe, X_re = X_re, 
+                                      n_post = n_post, resp = resp)
             
             # Get confidence intervals as quantiles of posterior samples
             alpha <- (1 - level)/2
@@ -983,7 +985,8 @@ SDE <- R6Class(
         #'   \item{\code{low}}{Matrix of lower bounds of confidence intervals}
         #'   \item{\code{upp}}{Matrix of upper bounds of confidence intervals}
         #' }
-        predict_par = function(new_data = NULL, CI = FALSE, level = 0.95, n_post = 1e3) {
+        predict_par = function(new_data = NULL, CI = FALSE, level = 0.95, 
+                               n_post = 1e3, resp = TRUE) {
             # Are there covariates in the observation process model?
             nocovs <- all(sapply(self$formulas(), function(f) f == ~1))
             
@@ -1000,12 +1003,14 @@ SDE <- R6Class(
             mats <- self$make_mat(new_data = new_data)
             
             # SDE parameters
-            par <- self$par(t = "all", X_fe = mats$X_fe, X_re = mats$X_re)
+            par <- self$par(t = "all", X_fe = mats$X_fe, X_re = mats$X_re, 
+                            resp = resp)
             
             if(CI) {
                 # Confidence intervals
                 CIs <- self$CI(X_fe = mats$X_fe, X_re = mats$X_re,
-                               level = level, n_post = n_post)
+                               level = level, n_post = n_post,
+                               resp = resp)
                 
                 # Return point estimates and confidence interval bounds  
                 preds <- list(estimate = par, low = CIs$low, upp = CIs$upp)
