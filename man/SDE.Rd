@@ -602,6 +602,9 @@ if one covariate's name is a substring of another one.
 \item{\code{term}}{Name of term as character string, e.g. "time", 
 or "s(time)"}
 
+\item{\code{t}}{Time points for which the parameters should be returned.
+If "all", returns parameters for all time steps. Default: "all".}
+
 \item{\code{resp}}{Logical (default: FALSE). If TRUE, return values
 on response scale rather than linear predictor scale.}
 

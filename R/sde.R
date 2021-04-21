@@ -767,6 +767,8 @@ SDE <- R6Class(
         #' 
         #' @param term Name of term as character string, e.g. "time", 
         #' or "s(time)"
+        #' @param t Time points for which the parameters should be returned.
+        #' If "all", returns parameters for all time steps. Default: "all".
         #' @param resp Logical (default: FALSE). If TRUE, return values
         #' on response scale rather than linear predictor scale.
         #' @param X_fe Optional design matrix for fixed effects. If not
