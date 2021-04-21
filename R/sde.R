@@ -904,18 +904,17 @@ SDE <- R6Class(
             
             # In post_fe, set columns for fixed parameters to fixed value,
             # and use posterior draws for non-fixed parameters
-            post_fe <- matrix(rep(self$coeff_fe(), each = n_post), 
+            post_fe <- matrix(rep(self$coeff_fe(), each = n_post),
                               nrow = n_post, ncol = sum(self$terms()$ncol_fe))
             post_fe[,ind_est_fe] <- post_coeff$coeff_fe
             post_re <- post_coeff$coeff_re
-            lp_post <- X_fe %*% t(post_fe) + X_re %*% t(post_re)
             
-            lp_array <- array(lp_post, dim = c(n, n_par, n_post))
-            
-            par_array <- array(NA, dim = c(n, n_par, n_post))
-            for(i in 1:dim(lp_array)[2]) {
-                par_array[,i,] <- self$invlink()[[i]](lp_array[,i,])
-            }
+            par_array <- array(sapply(1:n_post, function(i) {
+                self$par(t = "all", 
+                         X_fe = X_fe, X_re = X_re, 
+                         coeff_fe = post_fe[i,], 
+                         coeff_re = post_re[i,])  
+            }), dim = c(n, n_par, n_post))
             dimnames(par_array)[[2]] <- names(self$invlink())
             
             return(par_array)
