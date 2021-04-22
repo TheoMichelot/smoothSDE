@@ -973,6 +973,83 @@ SDE <- R6Class(
             return(list(low = low, upp = upp))
         },
         
+        #' @description Simultaneous confidence intervals for SDE parameters
+        #'
+        #' @param X_fe Design matrix for fixed effects, as returned
+        #' by \code{make_mat}
+        #' @param X_re Design matrix for random effects, as returned
+        #' by \code{make_mat}
+        #' @param level Confidence level (default: 0.95 for 95\% confidence 
+        #' intervals)
+        #' @param n_post Number of posterior samples from which the confidence
+        #' intervals are calculated. Larger values will reduce approximation
+        #' error, but increase computation time. Defaults to 1000.
+        #' @param resp Logical (default: TRUE). Should the output be on 
+        #' the response scale? If FALSE, the output is on the linear 
+        #' predictor scale.
+        #' 
+        #' This method closely follows the approach suggested by Gavin Simpson at
+        #' fromthebottomoftheheap.net/2016/12/15/simultaneous-interval-revisited/,
+        #' itself based on Section 6.5 of Ruppert et al. (2003).
+        #' 
+        #' @return List with elements:
+        #' \itemize{
+        #'   \item{\code{low}}{Matrix of lower bounds of confidence intervals.}
+        #'   \item{\code{upp}}{Matrix of upper bounds of confidence intervals.}
+        #' }
+        CI_simultaneous = function(new_data, level = 0.95, n_post = 1000, resp = TRUE) {
+            # Number of parameters of this SDE model
+            n_par <- length(self$formulas())
+            # Number of time steps
+            n <- nrow(new_data)
+            
+            # Get SE of parameters on linear predictor scale
+            par_linpred <- self$predict_par(new_data = new_data, CI = TRUE, resp = FALSE, 
+                                           level = level, n_post = n_post)
+            se_linpred <- (par_linpred$estimate - par_linpred$low)/qnorm((1 + level)/2)
+            se_linpred_vec <- as.vector(se_linpred)
+            
+            # Posterior samples of (estimate - true par) ~ N(0, V)
+            coeff_post <- self$post_coeff(n_post = n_post)
+            diff_fe <- t(sweep(x = coeff_post$coeff_fe, MARGIN = 2, 
+                               STATS = self$coeff_fe(), FUN = "-"))
+            diff_re <- t(sweep(x = coeff_post$coeff_re, MARGIN = 2, 
+                               STATS = self$coeff_re(), FUN = "-"))
+            
+            # Deviations between fitted and true parameters
+            mats <- self$make_mat(new_data = new_data)
+            sim_dev <- mats$X_fe %*% diff_fe + mats$X_re %*% diff_re
+            
+            # Absolute values of the standardized deviations from the true model
+            abs_dev <- abs(sweep(sim_dev, 1, se_linpred_vec, FUN = "/"))
+            abs_dev_array <- array(abs_dev, dim = c(n, n_par, n_post))
+            
+            # Take maximum
+            max_abs_dev <- apply(abs_dev_array, c(2, 3), max)
+            
+            # Critical value
+            crit <- apply(max_abs_dev, 1, quantile, prob = level, type = 8)
+            
+            # Lower and upper bounds of simultaneous CIs
+            dimnames <- list(NULL, c("low", "upp"), names(self$formulas()))
+            CIs <- array(sapply(1:n_par, function(i) {
+                par <- names(self$formulas())[i]
+                invlink <- ifelse(resp, yes = self$invlink()[[par]], no = identity)
+                low <- invlink(par_linpred$estimate[,par] - (crit[i] * se_linpred[,par]))
+                upp <- invlink(par_linpred$estimate[,par] + (crit[i] * se_linpred[,par]))
+                return(matrix(c(low, upp), ncol = 2))
+            }), dim = c(n, 2, n_par),  dimnames = dimnames)
+            
+            # CI_list <- lapply(names(self$formulas()), function(par) {
+            #     CIs[,,par]
+            # })
+            # names(CI_list) <- names(self$formulas())
+            
+            CI_list <- list(low = CIs[,"low",], upp = CIs[,"upp",])
+            
+            return(CI_list)
+        },
+        
         #' @description Predict SDE parameters
         #' 
         #' @param new_data Data frame containing covariate values for which the
