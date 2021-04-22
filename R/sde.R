@@ -926,7 +926,7 @@ SDE <- R6Class(
             return(par_array)
         },
         
-        #' @description Confidence intervals for SDE parameters
+        #' @description Pointwise confidence intervals for SDE parameters
         #'
         #' @param X_fe Design matrix for fixed effects, as returned
         #' by \code{make_mat}
@@ -955,7 +955,7 @@ SDE <- R6Class(
         #'   \item{\code{low}}{Matrix of lower bounds of confidence intervals.}
         #'   \item{\code{upp}}{Matrix of upper bounds of confidence intervals.}
         #' }
-        CI = function(X_fe, X_re, level = 0.95, n_post = 1e3, resp = TRUE) {
+        CI_pointwise = function(X_fe, X_re, level = 0.95, n_post = 1e3, resp = TRUE) {
             # Posterior samples of SDE parameters
             post_par <- self$post_par(X_fe = X_fe, X_re = X_re, 
                                       n_post = n_post, resp = resp)
@@ -1005,7 +1005,7 @@ SDE <- R6Class(
             
             # Get SE of parameters on linear predictor scale
             par_linpred <- self$predict_par(new_data = new_data, CI = TRUE, resp = FALSE, 
-                                           level = level, n_post = n_post)
+                                            level = level, n_post = n_post)
             se_linpred <- (par_linpred$estimate - par_linpred$low)/qnorm((1 + level)/2)
             se_linpred_vec <- as.vector(se_linpred)
             
@@ -1096,9 +1096,9 @@ SDE <- R6Class(
             
             if(CI) {
                 # Confidence intervals
-                CIs <- self$CI(X_fe = mats$X_fe, X_re = mats$X_re,
-                               level = level, n_post = n_post,
-                               resp = resp)
+                CIs <- self$CI_pointwise(X_fe = mats$X_fe, X_re = mats$X_re,
+                                         level = level, n_post = n_post,
+                                         resp = resp)
                 
                 # Return point estimates and confidence interval bounds  
                 preds <- list(estimate = par, low = CIs$low, upp = CIs$upp)
@@ -1246,7 +1246,7 @@ SDE <- R6Class(
                         mean <- exp(- dtimes[i-1] / sub_par[i-1, "tau"]) * sub_obs[i-1] +
                             (1 - exp(-dtimes[i-1] / sub_par[i-1, "tau"])) * sub_par[i-1, "mu"]
                         sd <- sqrt(sub_par[i-1, "kappa"] * 
-                            (1 - exp(-2 * dtimes[i-1] / sub_par[i-1, "tau"])))
+                                       (1 - exp(-2 * dtimes[i-1] / sub_par[i-1, "tau"])))
                         sub_obs[i] <- rnorm(n = 1, mean = mean, sd = sd)
                     }
                 } else {
