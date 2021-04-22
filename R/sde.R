@@ -928,10 +928,8 @@ SDE <- R6Class(
         
         #' @description Pointwise confidence intervals for SDE parameters
         #'
-        #' @param X_fe Design matrix for fixed effects, as returned
-        #' by \code{make_mat}
-        #' @param X_re Design matrix for random effects, as returned
-        #' by \code{make_mat}
+        #' @param new_data Data frame containing covariate values for which the
+        #' CIs should be computed
         #' @param level Confidence level (default: 0.95 for 95\% confidence 
         #' intervals)
         #' @param n_post Number of posterior samples from which the confidence
@@ -955,9 +953,12 @@ SDE <- R6Class(
         #'   \item{\code{low}}{Matrix of lower bounds of confidence intervals.}
         #'   \item{\code{upp}}{Matrix of upper bounds of confidence intervals.}
         #' }
-        CI_pointwise = function(X_fe, X_re, level = 0.95, n_post = 1e3, resp = TRUE) {
+        CI_pointwise = function(new_data, level = 0.95, n_post = 1e3, resp = TRUE) {
+            # Design matrices
+            mats <- self$make_mat(new_data = new_data)
+            
             # Posterior samples of SDE parameters
-            post_par <- self$post_par(X_fe = X_fe, X_re = X_re, 
+            post_par <- self$post_par(X_fe = mats$X_fe, X_re = mats$X_re, 
                                       n_post = n_post, resp = resp)
             
             # Get confidence intervals as quantiles of posterior samples
@@ -975,10 +976,8 @@ SDE <- R6Class(
         
         #' @description Simultaneous confidence intervals for SDE parameters
         #'
-        #' @param X_fe Design matrix for fixed effects, as returned
-        #' by \code{make_mat}
-        #' @param X_re Design matrix for random effects, as returned
-        #' by \code{make_mat}
+        #' @param new_data Data frame containing covariate values for which the
+        #' CIs should be computed
         #' @param level Confidence level (default: 0.95 for 95\% confidence 
         #' intervals)
         #' @param n_post Number of posterior samples from which the confidence
@@ -1096,9 +1095,9 @@ SDE <- R6Class(
             
             if(CI) {
                 # Confidence intervals
-                CIs <- self$CI_pointwise(X_fe = mats$X_fe, X_re = mats$X_re,
-                                         level = level, n_post = n_post,
-                                         resp = resp)
+                CIs <- self$CI_pointwise(
+                    new_data = new_data, level = level, 
+                    n_post = n_post, resp = resp)
                 
                 # Return point estimates and confidence interval bounds  
                 preds <- list(estimate = par, low = CIs$low, upp = CIs$upp)
