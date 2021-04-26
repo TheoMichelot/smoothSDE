@@ -660,10 +660,19 @@ SDE <- R6Class(
         #' (X_fe %*% coeff_fe + X_re %*% coeff_re) 
         #' with one row for each time step and one column for each SDE parameter
         linear_predictor = function(new_data = NULL, t = "all",
+                                    X_fe = NULL, X_re = NULL,
                                     coeff_fe = NULL, coeff_re = NULL,
                                     term = NULL) {
-            # Get design matrices (X_fe/X_re)
-            mats <- self$make_mat(new_data = new_data)
+            # Get design matrices (X_fe/X_re) if not provided
+            if(is.null(X_fe) | is.null(X_re)) {
+                mats <- self$make_mat(new_data = new_data)
+                if(is.null(X_fe)) {
+                    X_fe <- mats$X_fe
+                }
+                if(is.null(X_re)) {
+                    X_re <- mats$X_re
+                }
+            }
             
             # Use coeff_fe/coeff_re from model if not provided
             if(is.null(coeff_fe)) {
@@ -674,18 +683,20 @@ SDE <- R6Class(
             }
             
             # Only keep non-zero coefficients for relevant term
-            coeff_fe_term <- rep(0, length(coeff_fe))
-            coeff_re_term <- rep(0, length(coeff_re))
             if(!is.null(term)) {
+                coeff_fe_term <- rep(0, length(coeff_fe))
+                coeff_re_term <- rep(0, length(coeff_re))
                 term_ind <- term_indices(names_fe = self$terms()$names_fe, 
                                          names_re = self$terms()$names_re_all, 
                                          term = term)
                 coeff_fe_term[term_ind$fe] <- coeff_fe[term_ind$fe]
                 coeff_re_term[term_ind$re] <- coeff_re[term_ind$re]
+                coeff_fe <- coeff_fe_term
+                coeff_re <- coeff_re_term
             }
             
             # Get linear predictor and format into matrix
-            lp <- mats$X_fe %*% coeff_fe_term + mats$X_re %*% coeff_re_term
+            lp <- X_fe %*% coeff_fe + X_re %*% coeff_re
             lp_mat <- matrix(lp, ncol = length(self$formulas()))
             colnames(lp_mat) <- names(self$formulas())
             
@@ -717,55 +728,25 @@ SDE <- R6Class(
         #' 
         #' @return Matrix with one row for each time point in t, and one
         #' column for each SDE parameter
-        par = function(t = 1, X_fe = NULL, X_re = NULL, 
+        par = function(t = 1, new_data = NULL, 
+                       X_fe = NULL, X_re = NULL,
                        coeff_fe = NULL, coeff_re = NULL, 
                        resp = TRUE) {
-            # Use design matrices from data if not provided
-            if(is.null(X_fe)) {
-                X_fe <- self$mats()$X_fe
-            }
+            # Get linear predictor
+            lp_mat <- self$linear_predictor(new_data = new_data, t = t, 
+                                            X_fe = X_fe, X_re = X_re,
+                                            coeff_fe = coeff_fe, 
+                                            coeff_re = coeff_re)
             
-            if(is.null(X_re)) {
-                # Apply decay if necessary
-                if(is.null(self$other_data()$t_decay)) {
-                    X_re <- self$mats()$X_re
-                } else {
-                    X_re <- self$X_re_decay()
-                }
-            }
-            
-            # Use estimated coeff if not provided
-            if(is.null(coeff_fe))
-                coeff_fe <- self$coeff_fe()
-            if(is.null(coeff_re))
-                coeff_re <- self$coeff_re()
-            
-            # Get linear predictor and put into matrix where each row
-            # corresponds to a time step and each column to a parameter
-            lp <- X_fe %*% coeff_fe + X_re %*% coeff_re
-            lp_mat <- matrix(lp, ncol = length(self$formulas()))
-            
-            # Apply inverse link to get parameters on natural scale
+            # Apply inverse link to get parameters on response scale
             if(resp) {
-                par_mat <- matrix(NA, nrow = nrow(lp_mat), ncol = ncol(lp_mat))
-                for(i in 1:ncol(lp_mat)) {
-                    par_mat[,i] <- self$invlink()[[i]](lp_mat[,i])
-                }                
+                par_mat <- matrix(sapply(1:ncol(lp_mat), function(i) {
+                    self$invlink()[[i]](lp_mat[,i])   
+                }), ncol = ncol(lp_mat))
+                colnames(par_mat) <- names(self$invlink())
             } else {
                 par_mat <- lp_mat
             }
-            colnames(par_mat) <- names(self$invlink())
-            
-            # Keep rows of par_mat given in 't'
-            if(length(t) == 1) {
-                if(t == "all")
-                    t <- 1:nrow(par_mat)
-            }
-            if(any(t < 1 | t > nrow(par_mat))) {
-                stop("'t' should be between 1 and", nrow(par_mat))
-            }
-            par_mat <- par_mat[t,, drop = FALSE]
-            
             return(par_mat)
         },
         
