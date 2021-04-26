@@ -1302,14 +1302,17 @@ SDE <- R6Class(
             df <- rbind(mle_df, post_df)
             df$var <- mats$new_data[, var]
             
-            # If 'par' is specified, subset to relevant parameters
+            # If 'par_names' is specified, subset to relevant parameters
             if(!is.null(par_names)) {
                 if(!all(par_names %in% unique(df$par))) {
-                    error_message <- paste0("Check that elements of 'par' are in: '", 
+                    error_message <- paste0("Check that elements of 'par_names' are in: '", 
                                             paste0(unique(df$par), collapse = "', '"), "'")
                     stop(error_message)
                 }
                 df <- subset(df, par %in% par_names)
+                if(show_CI != "none") {
+                    CI_df <- subset(CI_df, par %in% par_names)
+                }
             }
             
             # Create caption with values of other (fixed) covariates      
