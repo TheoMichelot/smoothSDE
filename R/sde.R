@@ -674,16 +674,18 @@ SDE <- R6Class(
             }
             
             # Only keep non-zero coefficients for relevant term
+            coeff_fe_term <- rep(0, length(coeff_fe))
+            coeff_re_term <- rep(0, length(coeff_re))
             if(!is.null(term)) {
                 term_ind <- term_indices(names_fe = self$terms()$names_fe, 
                                          names_re = self$terms()$names_re_all, 
                                          term = term)
-                coeff_fe_term[-term_ind$fe] <- 0
-                coeff_re_term[-term_ind$re] <- 0
+                coeff_fe_term[term_ind$fe] <- coeff_fe[term_ind$fe]
+                coeff_re_term[term_ind$re] <- coeff_re[term_ind$re]
             }
             
             # Get linear predictor and format into matrix
-            lp <- mats$X_fe %*% coeff_fe + mats$X_re %*% coeff_re
+            lp <- mats$X_fe %*% coeff_fe_term + mats$X_re %*% coeff_re_term
             lp_mat <- matrix(lp, ncol = length(self$formulas()))
             colnames(lp_mat) <- names(self$formulas())
             
