@@ -711,7 +711,7 @@ SDE <- R6Class(
             
             return(lp_mat)
         },
-            
+        
         #' @description Get SDE parameters
         #' 
         #' @param t Time points for which the parameters should be returned.
@@ -731,12 +731,13 @@ SDE <- R6Class(
         par = function(t = 1, new_data = NULL, 
                        X_fe = NULL, X_re = NULL,
                        coeff_fe = NULL, coeff_re = NULL, 
-                       resp = TRUE) {
+                       resp = TRUE, term = NULL) {
             # Get linear predictor
             lp_mat <- self$linear_predictor(new_data = new_data, t = t, 
                                             X_fe = X_fe, X_re = X_re,
                                             coeff_fe = coeff_fe, 
-                                            coeff_re = coeff_re)
+                                            coeff_re = coeff_re, 
+                                            term = term)
             
             # Apply inverse link to get parameters on response scale
             if(resp) {
@@ -817,7 +818,7 @@ SDE <- R6Class(
         #' 
         #' @return Array with one row for each time step, one column for
         #' each SDE parameter, and one layer for each posterior draw
-        post_par = function(X_fe, X_re, n_post = 100, resp = TRUE) {
+        post_par = function(X_fe, X_re, n_post = 100, resp = TRUE, term = NULL) {
             # Number of SDE parameters
             n_par <- length(self$formulas())
             # Number of time steps
@@ -843,7 +844,8 @@ SDE <- R6Class(
                          X_fe = X_fe, X_re = X_re, 
                          coeff_fe = post_fe[i,], 
                          coeff_re = post_re[i,],
-                         resp = resp)  
+                         resp = resp, 
+                         term = term)  
             }), dim = c(n, n_par, n_post))
             dimnames(par_array)[[2]] <- names(self$invlink())
             
@@ -877,13 +879,15 @@ SDE <- R6Class(
         #'   \item{\code{low}}{Matrix of lower bounds of confidence intervals.}
         #'   \item{\code{upp}}{Matrix of upper bounds of confidence intervals.}
         #' }
-        CI_pointwise = function(new_data, level = 0.95, n_post = 1e3, resp = TRUE) {
+        CI_pointwise = function(new_data, level = 0.95, n_post = 1e3, 
+                                resp = TRUE, term = NULL) {
             # Design matrices
             mats <- self$make_mat(new_data = new_data)
             
             # Posterior samples of SDE parameters
             post_par <- self$post_par(X_fe = mats$X_fe, X_re = mats$X_re, 
-                                      n_post = n_post, resp = resp)
+                                      n_post = n_post, resp = resp,
+                                      term = term)
             
             # Get confidence intervals as quantiles of posterior samples
             alpha <- (1 - level)/2
@@ -920,7 +924,8 @@ SDE <- R6Class(
         #'   \item{\code{low}}{Matrix of lower bounds of confidence intervals.}
         #'   \item{\code{upp}}{Matrix of upper bounds of confidence intervals.}
         #' }
-        CI_simultaneous = function(new_data, level = 0.95, n_post = 1000, resp = TRUE) {
+        CI_simultaneous = function(new_data, level = 0.95, n_post = 1000, 
+                                   resp = TRUE, term = NULL) {
             # Number of parameters of this SDE model
             n_par <- length(self$formulas())
             # Number of time steps
@@ -928,7 +933,7 @@ SDE <- R6Class(
             
             # Get SE of parameters on linear predictor scale
             par_linpred <- self$predict_par(new_data = new_data, CI = TRUE, resp = FALSE, 
-                                            level = level, n_post = n_post)
+                                            level = level, n_post = n_post, term = term)
             se_linpred <- (par_linpred$estimate - par_linpred$low)/qnorm((1 + level)/2)
             se_linpred_vec <- as.vector(se_linpred)
             
@@ -938,6 +943,32 @@ SDE <- R6Class(
                                STATS = self$coeff_fe(), FUN = "-"))
             diff_re <- t(sweep(x = coeff_post$coeff_re, MARGIN = 2, 
                                STATS = self$coeff_re(), FUN = "-"))
+            
+            # sim_dev <- sapply(1:n_post, function(i) {
+            #     lp <- self$linear_predictor(
+            #         new_data = new_data, t = "all",
+            #         coeff_fe = diff_fe[,i], coeff_re = diff_re[,i], 
+            #         term = term)
+            #     return(as.vector(lp))
+            # })
+            
+            # The following is redundant with linear_predictor because, at the
+            # moment, calling linear_predictor to each column of diff_fe/re is
+            # too computational. In the future, linear_predictor should be able
+            # to work with matrices provided for coeff_fe/re.
+            
+            # Only keep non-zero coefficients for relevant term
+            if(!is.null(term)) {
+                diff_fe_term <- matrix(0, nrow = nrow(diff_fe), ncol = ncol(diff_fe))
+                diff_re_term <- matrix(0, nrow = nrow(diff_re), ncol = ncol(diff_re))
+                term_ind <- term_indices(names_fe = self$terms()$names_fe, 
+                                         names_re = self$terms()$names_re_all, 
+                                         term = term)
+                diff_fe_term[term_ind$fe,] <- diff_fe[term_ind$fe,]
+                diff_re_term[term_ind$re,] <- diff_re[term_ind$re,]
+                diff_fe <- diff_fe_term
+                diff_re <- diff_re_term
+            }
             
             # Deviations between fitted and true parameters
             mats <- self$make_mat(new_data = new_data)
@@ -963,6 +994,7 @@ SDE <- R6Class(
                 return(matrix(c(low, upp), ncol = 2))
             }), dim = c(n, 2, n_par),  dimnames = dimnames)
             
+            # # Split the output by parameter rather than low/upp?
             # CI_list <- lapply(names(self$formulas()), function(par) {
             #     CIs[,,par]
             # })
@@ -997,7 +1029,7 @@ SDE <- R6Class(
         #'   \item{\code{upp}}{Matrix of upper bounds of confidence intervals}
         #' }
         predict_par = function(new_data = NULL, CI = FALSE, level = 0.95, 
-                               n_post = 1e3, resp = TRUE) {
+                               n_post = 1e3, resp = TRUE, term = NULL) {
             # Are there covariates in the observation process model?
             nocovs <- all(sapply(self$formulas(), function(f) f == ~1))
             
@@ -1015,13 +1047,13 @@ SDE <- R6Class(
             
             # SDE parameters
             par <- self$par(t = "all", X_fe = mats$X_fe, X_re = mats$X_re, 
-                            resp = resp)
+                            resp = resp, term = term)
             
             if(CI) {
                 # Confidence intervals
                 CIs <- self$CI_pointwise(
-                    new_data = new_data, level = level, 
-                    n_post = n_post, resp = resp)
+                    new_data = new_data, level = level, n_post = n_post, 
+                    resp = resp, term = term)
                 
                 # Return point estimates and confidence interval bounds  
                 preds <- list(estimate = par, low = CIs$low, upp = CIs$upp)
@@ -1201,7 +1233,8 @@ SDE <- R6Class(
         #' @param n_post Number of posterior draws to plot. Default: 100.
         #' 
         #' @return A ggplot object
-        plot_par = function(var, par_names = NULL, covs = NULL, n_post = 100) {
+        plot_par = function(var, par_names = NULL, covs = NULL, n_post = 100,
+                            term = NULL) {
             if(missing(var)) {
                 var_names <- unique(rapply(self$formulas(), all.vars))
                 error_message <- paste0("'var' should be one of: '", 
@@ -1211,13 +1244,14 @@ SDE <- R6Class(
             
             # Create design matrices
             mats <- self$make_mat_grid(var = var, covs = covs)
-            par <- self$par(t = "all", X_fe = mats$X_fe, X_re = mats$X_re)
+            par <- self$par(t = "all", X_fe = mats$X_fe, X_re = mats$X_re, term = term)
             
             # Data frame for posterior draws
             if(n_post > 0) {
                 post <- self$post_par(X_fe = mats$X_fe, 
                                       X_re = mats$X_re, 
-                                      n_post = n_post)
+                                      n_post = n_post, 
+                                      term = term)
                 post_df <- as.data.frame.table(post)
                 colnames(post_df) <- c("var", "par", "stratum", "val")
                 
