@@ -148,6 +148,18 @@ logLik.SDE <- function(object, ...) {
     return(val)
 }
 
+#' Indices of coefficients for given model term
+#' 
+#' @param names_fe Names of fixed effect coefficients
+#' @param names_re Names of random effect coefficients
+#' @param term Name of term as character string, e.g. "time", 
+#' or "s(time)"
+#' 
+#' @return List with elements \code{fe} and \code{re}, which are vectors
+#' of the indices in coeff_fe and coeff_re (respectively) corresponding
+#' to the term.
+#' 
+#' @export
 term_indices <- function(names_fe, names_re, term) {
     # Find indices of coeff_fe and coeff_re that we want to keep
     # (this is simply done by finding those that have 'term' in their names)
