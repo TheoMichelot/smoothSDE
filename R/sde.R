@@ -641,6 +641,29 @@ SDE <- R6Class(
         ####################
         ## Get parameters ##
         ####################
+        #' @description Get linear predictor for SDE parameters
+        linear_predictor = function(new_data, coeff_fe = NULL, coeff_re = NULL,
+                                    term = NULL) {
+            # Get design matrices (X_fe/X_re)
+            mats <- self$make_matrices(new_data = new_data)
+            
+            # Use coeff_fe/coeff_re from model if not provided
+            if(is.null(coeff_fe)) {
+                coeff_fe <- self$coeff_fe()
+            }
+            if(is.null(coeff_re)) {
+                coeff_re <- self$coeff_re()
+            }
+            
+            # Only keep non-zero coefficients for relevant term
+            if(!is.null(term)) {
+                # ...
+            }
+            
+            lp <- mats$X_fe %*% coeff_fe + mats$X_re %*% coeff_re
+            return(lp)
+        }
+            
         #' @description Get SDE parameters
         #' 
         #' @param t Time points for which the parameters should be returned.
