@@ -279,7 +279,7 @@ bm$fit()
 Once the model is fitted, we can visualise the relationship between the SDE parameters and the covariates with `plot_par`. The option `n_post` can be used to visualise uncertainty with posterior samples.
 
 ```{r ex1-plot-par, fig.width = 8, fig.height = 3, out.width="100%"}
-bm$plot_par("time", n_post = 100)
+bm$plot_par("time")
 ```
 
 The smoothing splines captured the oscillating patterns in the diffusion parameter, and the drift parameter was slightly underestimated. We can also evaluate the SDE parameters on a grid of covariate values, to compare directly to the true parameters.
@@ -473,7 +473,7 @@ my_sde$fit()
 Finally, the relationship between the SDE parameters and the covariates can be plotted with the method `plot_par`. The function can also generate posterior samples for the estimated relationship, to visualise uncertainty. Here, we plot the CTCRW parameters as function of temperature, with 100 posterior samples:
 
 ``` {r ex3-plot, fig.width = 8, fig.height = 3, out.width="100%", fig.align="center"}
-my_sde$plot_par("temp", n_post = 100)
+my_sde$plot_par("temp")
 ```
 
 As described by @michelot2021, these results suggest that this elephant tended to move less at high temperatures, with a big drop in speed over 40 degrees Celsius. Estimates and point-wise confidence intervals of the SDE parameters can also be computed for given covariate values, using the `predict_par` method.
