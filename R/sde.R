@@ -879,13 +879,17 @@ SDE <- R6Class(
         #'   \item{\code{low}}{Matrix of lower bounds of confidence intervals.}
         #'   \item{\code{upp}}{Matrix of upper bounds of confidence intervals.}
         #' }
-        CI_pointwise = function(new_data, level = 0.95, n_post = 1e3, 
+        CI_pointwise = function(new_data = NULL, X_fe = NULL, X_re = NULL, 
+                                level = 0.95, n_post = 1e3, 
                                 resp = TRUE, term = NULL) {
-            # Design matrices
-            mats <- self$make_mat(new_data = new_data)
+            if(is.null(X_fe) | is.null(X_re)) {
+                mats <- self$make_mat(new_data = new_data)
+                X_fe <- mats$X_fe
+                X_re <- mats$X_re
+            }
             
             # Posterior samples of SDE parameters
-            post_par <- self$post_par(X_fe = mats$X_fe, X_re = mats$X_re, 
+            post_par <- self$post_par(X_fe = X_fe, X_re = X_re, 
                                       n_post = n_post, resp = resp,
                                       term = term)
             
@@ -924,15 +928,23 @@ SDE <- R6Class(
         #'   \item{\code{low}}{Matrix of lower bounds of confidence intervals.}
         #'   \item{\code{upp}}{Matrix of upper bounds of confidence intervals.}
         #' }
-        CI_simultaneous = function(new_data, level = 0.95, n_post = 1000, 
+        CI_simultaneous = function(new_data = NULL, X_fe = NULL, X_re = NULL, 
+                                   level = 0.95, n_post = 1000, 
                                    resp = TRUE, term = NULL) {
+            # Use new_data to get design matrices if not provided
+            if(is.null(X_fe) | is.null(X_re)) {
+                mats <- self$make_mat(new_data = new_data)
+                X_fe <- mats$X_fe
+                X_re <- mats$X_re
+            }
+            
             # Number of parameters of this SDE model
             n_par <- length(self$formulas())
             # Number of time steps
-            n <- nrow(new_data)
+            n <- nrow(X_fe)/n_par
             
             # Get SE of parameters on linear predictor scale
-            par_linpred <- self$predict_par(new_data = new_data, CI = TRUE, resp = FALSE, 
+            par_linpred <- self$predict_par(X_fe = X_fe, X_re = X_re, CI = TRUE, resp = FALSE, 
                                             level = level, n_post = n_post, term = term)
             se_linpred <- (par_linpred$estimate - par_linpred$low)/qnorm((1 + level)/2)
             se_linpred_vec <- as.vector(se_linpred)
@@ -971,8 +983,7 @@ SDE <- R6Class(
             }
             
             # Deviations between fitted and true parameters
-            mats <- self$make_mat(new_data = new_data)
-            sim_dev <- mats$X_fe %*% diff_fe + mats$X_re %*% diff_re
+            sim_dev <- X_fe %*% diff_fe + X_re %*% diff_re
             
             # Absolute values of the standardized deviations from the true model
             abs_dev <- abs(sweep(sim_dev, 1, se_linpred_vec, FUN = "/"))
@@ -981,8 +992,9 @@ SDE <- R6Class(
             # Take maximum
             max_abs_dev <- apply(abs_dev_array, c(2, 3), max)
             
-            # Critical value
-            crit <- apply(max_abs_dev, 1, quantile, prob = level, type = 8)
+            # Critical value (na.rm for case where SE = 0 and abs_dev = NaN)
+            crit <- apply(max_abs_dev, 1, quantile, prob = level, na.rm = TRUE)
+            crit[which(is.na(crit))] <- 0
             
             # Lower and upper bounds of simultaneous CIs
             dimnames <- list(NULL, c("low", "upp"), names(self$formulas()))
@@ -1028,7 +1040,8 @@ SDE <- R6Class(
         #'   \item{\code{low}}{Matrix of lower bounds of confidence intervals}
         #'   \item{\code{upp}}{Matrix of upper bounds of confidence intervals}
         #' }
-        predict_par = function(new_data = NULL, CI = FALSE, level = 0.95, 
+        predict_par = function(new_data = NULL, X_fe = NULL, X_re = NULL,
+                               CI = FALSE, level = 0.95, 
                                n_post = 1e3, resp = TRUE, term = NULL) {
             # Are there covariates in the observation process model?
             nocovs <- all(sapply(self$formulas(), function(f) f == ~1))
@@ -1037,23 +1050,25 @@ SDE <- R6Class(
             if(is.null(new_data)) {
                 if(nocovs) {
                     new_data <- data.frame(dummy = 1)
-                } else {
-                    stop("'new_data' must be provided if there are covariates in the model")      
                 }
+            } else if(is.null(X_fe) | is.null(X_re)) {
+                # Model matrices for new_data
+                mats <- self$make_mat(new_data = new_data)
+                X_fe <- mats$X_fe
+                X_re <- mats$X_re
+            } else {
+                stop("'new_data' must be provided if there are covariates in the model")      
             }
             
-            # Model matrices for new_data  
-            mats <- self$make_mat(new_data = new_data)
-            
             # SDE parameters
-            par <- self$par(t = "all", X_fe = mats$X_fe, X_re = mats$X_re, 
+            par <- self$par(t = "all", X_fe = X_fe, X_re = X_re, 
                             resp = resp, term = term)
             
             if(CI) {
                 # Confidence intervals
-                CIs <- self$CI_pointwise(
-                    new_data = new_data, level = level, n_post = n_post, 
-                    resp = resp, term = term)
+                CIs <- self$CI_pointwise(X_fe = X_fe, X_re = X_re, 
+                                         level = level, n_post = n_post, 
+                                         resp = resp, term = term)
                 
                 # Return point estimates and confidence interval bounds  
                 preds <- list(estimate = par, low = CIs$low, upp = CIs$upp)
@@ -1234,7 +1249,7 @@ SDE <- R6Class(
         #' 
         #' @return A ggplot object
         plot_par = function(var, par_names = NULL, covs = NULL, n_post = 100,
-                            term = NULL) {
+                            show_CI = "none", resp = TRUE, term = NULL) {
             if(missing(var)) {
                 var_names <- unique(rapply(self$formulas(), all.vars))
                 error_message <- paste0("'var' should be one of: '", 
@@ -1244,20 +1259,37 @@ SDE <- R6Class(
             
             # Create design matrices
             mats <- self$make_mat_grid(var = var, covs = covs)
-            par <- self$par(t = "all", X_fe = mats$X_fe, X_re = mats$X_re, term = term)
+            par <- self$par(t = "all", X_fe = mats$X_fe, X_re = mats$X_re, 
+                            resp = resp, term = term)
             
             # Data frame for posterior draws
-            if(n_post > 0) {
-                post <- self$post_par(X_fe = mats$X_fe, 
-                                      X_re = mats$X_re, 
-                                      n_post = n_post, 
-                                      term = term)
+            post_df <- NULL
+            if(n_post > 0 & show_CI == "none") {
+                post <- self$post_par(X_fe = mats$X_fe, X_re = mats$X_re, 
+                                      n_post = n_post, resp = resp, term = term)
                 post_df <- as.data.frame.table(post)
                 colnames(post_df) <- c("var", "par", "stratum", "val")
-                
-                post_df$mle = "no"
+                post_df$mle = "no"                   
             } else {
-                post_df <- NULL
+                if(show_CI == "pointwise") {
+                    CI <- self$CI_pointwise(X_fe = mats$X_fe, X_re = mats$X_re,
+                                            n_post = n_post, level = 0.95,
+                                            resp = resp, term = term)
+                    CI_df <- data.frame(var = mats$new_data[[var]],
+                                        par = rep(names(self$formulas()), each = nrow(CI$low)),
+                                        stratum = "CI",
+                                        low = as.vector(CI$low),
+                                        upp = as.vector(CI$upp))
+                } else if(show_CI == "simultaneous") {
+                    CI <- self$CI_simultaneous(X_fe = mats$X_fe, X_re = mats$X_re,
+                                               n_post = n_post, level = 0.95,
+                                               resp = resp, term = term)
+                    CI_df <- data.frame(var = mats$new_data[,var],
+                                        par = rep(names(self$formulas()), each = nrow(CI$low)),
+                                        stratum = "CI",
+                                        low = as.vector(CI$low),
+                                        upp = as.vector(CI$upp))
+                }
             }
             
             # Data frame for MLE
@@ -1299,7 +1331,7 @@ SDE <- R6Class(
             
             # Create plot
             pal <- c("no" = rgb(0.7, 0, 0, 0.1), "yes" = rgb(0, 0, 0, 1))
-            p0 <- ggplot(df, aes(var, val, group = stratum, col = mle)) + 
+            p0 <- ggplot(df, aes(x = var, group = stratum)) + 
                 scale_colour_manual(values = pal, guide = "none") +
                 facet_wrap(c("par"), scales = "free_y",
                            strip.position = "left",
@@ -1309,14 +1341,20 @@ SDE <- R6Class(
                       strip.placement = "outside", 
                       strip.text = element_text(colour = "black"))
             
+            if(show_CI != "none") {
+                p0 <- p0 + 
+                    geom_ribbon(aes(ymin = low, ymax = upp), data = CI_df, 
+                                fill = rgb(0.2, 0.5, 0.8, 0.3))
+            }
+            
             if(is.factor(df$var)) {
                 p <- p0 +
-                    geom_point(aes(size = mle)) +
+                    geom_point(aes(y = val, size = mle, col = mle)) +
                     scale_size_manual(values = c(0.1, 1), guide = "none") +
                     theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
             } else {
                 p <- p0 +
-                    geom_line()
+                    geom_line(aes(y = val, col = mle))
             }
             
             return(p)
