@@ -147,3 +147,12 @@ logLik.SDE <- function(object, ...) {
     class(val) <- "logLik"
     return(val)
 }
+
+term_indices <- function(names_fe, names_re, term) {
+    # Find indices of coeff_fe and coeff_re that we want to keep
+    # (this is simply done by finding those that have 'term' in their names)
+    wh_keep_fe <- grep(term, names_fe, fixed = TRUE)
+    wh_keep_re <- grep(term, names_re, fixed = TRUE)
+    
+    return(list(fe = wh_keep_fe, re = wh_keep_re))
+}

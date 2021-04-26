@@ -642,10 +642,28 @@ SDE <- R6Class(
         ## Get parameters ##
         ####################
         #' @description Get linear predictor for SDE parameters
-        linear_predictor = function(new_data, coeff_fe = NULL, coeff_re = NULL,
+        #' 
+        #' This uses fairly naive substring matching using grep when 'term'
+        #' is provided, and may not work if one covariate's name is a 
+        #' substring of another one.
+        #' 
+        #' @param new_data Optional data set of covariates. If not provided,
+        #' the observed covariates are used.
+        #' @param t Time points for which the parameters should be returned.
+        #' If "all", returns parameters for all time steps (default).
+        #' @param coeff_fe Optional vector of fixed effect parameters
+        #' @param coeff_re Optional vector of random effect parameters
+        #' @param term Name of term as character string, e.g. "time", 
+        #' or "s(time)"
+        #' 
+        #' @return Matrix of linear predictor 
+        #' (X_fe %*% coeff_fe + X_re %*% coeff_re) 
+        #' with one row for each time step and one column for each SDE parameter
+        linear_predictor = function(new_data = NULL, t = "all",
+                                    coeff_fe = NULL, coeff_re = NULL,
                                     term = NULL) {
             # Get design matrices (X_fe/X_re)
-            mats <- self$make_matrices(new_data = new_data)
+            mats <- self$make_mat(new_data = new_data)
             
             # Use coeff_fe/coeff_re from model if not provided
             if(is.null(coeff_fe)) {
@@ -657,12 +675,29 @@ SDE <- R6Class(
             
             # Only keep non-zero coefficients for relevant term
             if(!is.null(term)) {
-                # ...
+                term_ind <- term_indices(names_fe = self$terms()$names_fe, 
+                                         names_re = self$terms()$names_re_all, 
+                                         term = term)
+                coeff_fe_term[-term_ind$fe] <- 0
+                coeff_re_term[-term_ind$re] <- 0
             }
             
+            # Get linear predictor and format into matrix
             lp <- mats$X_fe %*% coeff_fe + mats$X_re %*% coeff_re
-            return(lp)
-        }
+            lp_mat <- matrix(lp, ncol = length(self$formulas()))
+            colnames(lp_mat) <- names(self$formulas())
+            
+            # Keep rows of lp_mat given in 't'
+            if(length(t) == 1) { if(t == "all") {
+                t <- 1:nrow(lp_mat)
+            }}
+            if(any(t < 1 | t > nrow(lp_mat))) {
+                stop("Elements of 't' should be between 1 and", nrow(lp_mat))
+            }
+            lp_mat <- lp_mat[t,, drop = FALSE]
+            
+            return(lp_mat)
+        },
             
         #' @description Get SDE parameters
         #' 
