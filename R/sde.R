@@ -329,66 +329,9 @@ SDE <- R6Class(
             private$rho_ <- new_rho
         },
         
-        ###################
-        ## Other methods ##
-        ###################
-        #' @description Print SDE and parameter formulas
-        message = function() {
-            message("#######################")
-            message("### smoothSDE model ###")
-            message("#######################")
-            
-            # Print SDE
-            eqn <- self$eqn()
-            message("SDE for ", self$type(), " model:")
-            message(eqn, "\n")
-            
-            # Print parameter formulas
-            message("Formulas for model parameters:")
-            f <- self$formulas()
-            for(i in 1:length(f)) {
-                if(names(f)[i] %in% self$fixpar()) {
-                    this_form <- "fixed"
-                } else {
-                    this_form <- as.character(f[[i]])[2]
-                    this_form <- gsub("\\+", "+\n\t", this_form)
-                }
-                message(names(f)[i], " ~ ", this_form)
-            }
-            cat("\n")
-        },
-        
-        #' @description Print SDE object
-        print = function() {
-            self$message()  
-        },
-        
-        #' @description Indices of fixed coefficients in coeff_fe
-        ind_fixcoeff = function() {
-            # Number of SDE parameters
-            n_par <- length(self$formulas())
-            
-            # Number of columns of X_fe for each SDE parameter
-            ncol_fe <- self$terms()$ncol_fe
-            
-            # Counter for coefficients in coeff_fe
-            k <- 1
-            # Initialise vector of indices of fixed coefficients
-            ind_fixcoeff <- NULL
-            # Loop over SDE parameters
-            for(par in 1:n_par) {
-                # If this parameter is fixed, add corresponding indices
-                # to ind_fixcoeff
-                if(names(self$formulas())[par] %in% self$fixpar()) {
-                    ind_thispar <- k:(k + ncol_fe[par] - 1)
-                    ind_fixcoeff <- c(ind_fixcoeff, ind_thispar)
-                }
-                k <- k + ncol_fe[par]
-            }
-            
-            return(ind_fixcoeff)
-        },
-        
+        #########################
+        ## Make model matrices ##
+        #########################
         #' @description Create model matrices
         #'
         #' @param new_data Optional new data set, including covariates for which
@@ -505,6 +448,9 @@ SDE <- R6Class(
             return(mats)
         },
         
+        ###################
+        ## Model fitting ##
+        ###################
         #' @description TMB setup
         #'  
         #' This creates an attribute \code{tmb_obj}, which can be used to 
@@ -692,6 +638,9 @@ SDE <- R6Class(
             }
         },
         
+        ####################
+        ## Get parameters ##
+        ####################
         #' @description Get SDE parameters
         #' 
         #' @param t Time points for which the parameters should be returned.
@@ -1362,7 +1311,7 @@ SDE <- R6Class(
             }
             
             return(p)
-        }
+        },
         
         # plot_term = function(term, var, par_name, t = "all", 
         #                      resp = FALSE, n_post = 1000) {
@@ -1397,6 +1346,66 @@ SDE <- R6Class(
         #     
         #     return(p)
         # }
+        
+        ###################
+        ## Miscellaneous ##
+        ###################
+        #' @description Indices of fixed coefficients in coeff_fe
+        ind_fixcoeff = function() {
+            # Number of SDE parameters
+            n_par <- length(self$formulas())
+            
+            # Number of columns of X_fe for each SDE parameter
+            ncol_fe <- self$terms()$ncol_fe
+            
+            # Counter for coefficients in coeff_fe
+            k <- 1
+            # Initialise vector of indices of fixed coefficients
+            ind_fixcoeff <- NULL
+            # Loop over SDE parameters
+            for(par in 1:n_par) {
+                # If this parameter is fixed, add corresponding indices
+                # to ind_fixcoeff
+                if(names(self$formulas())[par] %in% self$fixpar()) {
+                    ind_thispar <- k:(k + ncol_fe[par] - 1)
+                    ind_fixcoeff <- c(ind_fixcoeff, ind_thispar)
+                }
+                k <- k + ncol_fe[par]
+            }
+            
+            return(ind_fixcoeff)
+        },
+        
+        #' @description Print SDE and parameter formulas
+        message = function() {
+            message("#######################")
+            message("### smoothSDE model ###")
+            message("#######################")
+            
+            # Print SDE
+            eqn <- self$eqn()
+            message("SDE for ", self$type(), " model:")
+            message(eqn, "\n")
+            
+            # Print parameter formulas
+            message("Formulas for model parameters:")
+            f <- self$formulas()
+            for(i in 1:length(f)) {
+                if(names(f)[i] %in% self$fixpar()) {
+                    this_form <- "fixed"
+                } else {
+                    this_form <- as.character(f[[i]])[2]
+                    this_form <- gsub("\\+", "+\n\t", this_form)
+                }
+                message(names(f)[i], " ~ ", this_form)
+            }
+            cat("\n")
+        },
+        
+        #' @description Print SDE object
+        print = function() {
+            self$message()  
+        }
     ),
     
     private = list(
