@@ -1422,40 +1422,6 @@ SDE <- R6Class(
             return(p)
         },
         
-        # plot_term = function(term, var, par_name, t = "all", 
-        #                      resp = FALSE, n_post = 1000) {
-        #     # MLE for term
-        #     mle <- self$get_term(term = term, t = t, resp = resp)[,par_name]
-        #     
-        #     # Posterior sample for term
-        #     post_coeff <- self$post_coeff(n_post = n_post)
-        #     post_term <- sapply(1:n_post, function(i) {
-        #         term <- self$get_term(term = term, t = t, resp = resp, 
-        #                               coeff_fe = post_coeff$coeff_fe[i,],
-        #                               coeff_re = post_coeff$coeff_re[i,])
-        #         return(term[,par_name])
-        #     })
-        #     
-        #     # Quantiles for confidence bands
-        #     quants <- apply(post_term, 1, quantile, probs = c(0.025, 0.975))
-        #     
-        #     # Covariate for the x axis
-        #     x <- data[[var]]
-        #     if(t != "all") {
-        #         x <- x[t]
-        #     }
-        #     
-        #     # Data frame for plot
-        #     df <- data.frame(x = x, mle = mle,
-        #                      low = quants[1,],
-        #                      upp = quants[2,])
-        #     
-        #     p <- ggplot(df, aes(x, mle)) + geom_line(size = 1) +
-        #         geom_ribbon(aes(ymin = low, ymax = upp), alpha = 0.25)
-        #     
-        #     return(p)
-        # }
-        
         ###################
         ## Miscellaneous ##
         ###################
