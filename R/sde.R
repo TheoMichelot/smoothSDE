@@ -643,18 +643,24 @@ SDE <- R6Class(
         ####################
         #' @description Get linear predictor for SDE parameters
         #' 
-        #' This uses fairly naive substring matching using grep when 'term'
-        #' is provided, and may not work if one covariate's name is a 
-        #' substring of another one.
-        #' 
-        #' @param new_data Optional data set of covariates. If not provided,
-        #' the observed covariates are used.
+        #' @param new_data Optional data set of covariates. If \code{new_data},
+        #' \code{X_fe} and \code{X_re} are not provided, then the observed 
+        #' covariates are used.
         #' @param t Time points for which the parameters should be returned.
         #' If "all", returns parameters for all time steps (default).
+        #' @param X_fe Optional design matrix for fixed effects, as returned
+        #' by \code{make_mat}. If \code{new_data}, \code{X_fe} and \code{X_re} 
+        #' are not provided, then the observed covariates are used.
+        #' @param X_re Optional design matrix for random effects, as returned
+        #' by \code{make_mat}. If \code{new_data}, \code{X_fe} and \code{X_re} 
+        #' are not provided, then the observed covariates are used.
         #' @param coeff_fe Optional vector of fixed effect parameters
         #' @param coeff_re Optional vector of random effect parameters
-        #' @param term Name of term as character string, e.g. "time", 
-        #' or "s(time)"
+        #' @param term Name of model term as character string, e.g., "time", 
+        #' or "s(time)". Use \code{$coeff_fe()} and \code{$coeff_re()} methods
+        #' to find names of model terms. This uses fairly naive substring 
+        #' matching, and may not work if one covariate's name is a 
+        #' substring of another one.
         #' 
         #' @return Matrix of linear predictor 
         #' (X_fe %*% coeff_fe + X_re %*% coeff_re) 
@@ -716,6 +722,9 @@ SDE <- R6Class(
         #' 
         #' @param t Time points for which the parameters should be returned.
         #' If "all", returns parameters for all time steps. Default: 1.
+        #' @param new_data Optional data set of covariates. If \code{new_data},
+        #' \code{X_fe} and \code{X_re} are not provided, then the observed 
+        #' covariates are used.
         #' @param X_fe Optional design matrix for fixed effects, as returned
         #' by \code{make_mat}. By default, uses design matrix from data.
         #' @param X_re Optional design matrix for random effects, as returned
@@ -725,6 +734,11 @@ SDE <- R6Class(
         #' @param resp Logical (default: TRUE). Should the output be on 
         #' the response scale? If FALSE, the output is on the linear 
         #' predictor scale.
+        #' @param term Name of model term as character string, e.g., "time", 
+        #' or "s(time)". Use \code{$coeff_fe()} and \code{$coeff_re()} methods
+        #' to find names of model terms. This uses fairly naive substring 
+        #' matching, and may not work if one covariate's name is a 
+        #' substring of another one.
         #' 
         #' @return Matrix with one row for each time point in t, and one
         #' column for each SDE parameter
@@ -815,6 +829,11 @@ SDE <- R6Class(
         #' @param resp Logical (default: TRUE). Should the output be on 
         #' the response scale? If FALSE, the output is on the linear 
         #' predictor scale.
+        #' @param term Name of model term as character string, e.g., "time", 
+        #' or "s(time)". Use \code{$coeff_fe()} and \code{$coeff_re()} methods
+        #' to find names of model terms. This uses fairly naive substring 
+        #' matching, and may not work if one covariate's name is a 
+        #' substring of another one.
         #' 
         #' @return Array with one row for each time step, one column for
         #' each SDE parameter, and one layer for each posterior draw
@@ -854,8 +873,12 @@ SDE <- R6Class(
         
         #' @description Pointwise confidence intervals for SDE parameters
         #'
-        #' @param new_data Data frame containing covariate values for which the
-        #' CIs should be computed
+        #' @param new_data Optional data frame containing covariate values 
+        #' for which the CIs should be computed
+        #' @param X_fe Optional design matrix for fixed effects, as returned
+        #' by \code{make_mat}. By default, uses design matrix from data.
+        #' @param X_re Optional design matrix for random effects, as returned
+        #' by \code{make_mat}. By default, uses design matrix from data.
         #' @param level Confidence level (default: 0.95 for 95\% confidence 
         #' intervals)
         #' @param n_post Number of posterior samples from which the confidence
@@ -864,6 +887,11 @@ SDE <- R6Class(
         #' @param resp Logical (default: TRUE). Should the output be on 
         #' the response scale? If FALSE, the output is on the linear 
         #' predictor scale.
+        #' @param term Name of model term as character string, e.g., "time", 
+        #' or "s(time)". Use \code{$coeff_fe()} and \code{$coeff_re()} methods
+        #' to find names of model terms. This uses fairly naive substring 
+        #' matching, and may not work if one covariate's name is a 
+        #' substring of another one.
         #' 
         #' This method generates pointwise confidence intervals 
         #' by simulation. That is, it generates \code{n_post} posterior samples 
@@ -908,8 +936,12 @@ SDE <- R6Class(
         
         #' @description Simultaneous confidence intervals for SDE parameters
         #'
-        #' @param new_data Data frame containing covariate values for which the
-        #' CIs should be computed
+        #' @param new_data Optional data frame containing covariate values 
+        #' for which the CIs should be computed
+        #' @param X_fe Optional design matrix for fixed effects, as returned
+        #' by \code{make_mat}. By default, uses design matrix from data.
+        #' @param X_re Optional design matrix for random effects, as returned
+        #' by \code{make_mat}. By default, uses design matrix from data.
         #' @param level Confidence level (default: 0.95 for 95\% confidence 
         #' intervals)
         #' @param n_post Number of posterior samples from which the confidence
@@ -918,6 +950,11 @@ SDE <- R6Class(
         #' @param resp Logical (default: TRUE). Should the output be on 
         #' the response scale? If FALSE, the output is on the linear 
         #' predictor scale.
+        #' @param term Name of model term as character string, e.g., "time", 
+        #' or "s(time)". Use \code{$coeff_fe()} and \code{$coeff_re()} methods
+        #' to find names of model terms. This uses fairly naive substring 
+        #' matching, and may not work if one covariate's name is a 
+        #' substring of another one.
         #' 
         #' This method closely follows the approach suggested by Gavin Simpson at
         #' fromthebottomoftheheap.net/2016/12/15/simultaneous-interval-revisited/,
@@ -1019,8 +1056,12 @@ SDE <- R6Class(
         
         #' @description Predict SDE parameters
         #' 
-        #' @param new_data Data frame containing covariate values for which the
-        #' SDE parameters should be predicted.
+        #' @param new_data Optional data frame containing covariate values 
+        #' for which the SDE parameters should be predicted.
+        #' @param X_fe Optional design matrix for fixed effects, as returned
+        #' by \code{make_mat}. By default, uses design matrix from data.
+        #' @param X_re Optional design matrix for random effects, as returned
+        #' by \code{make_mat}. By default, uses design matrix from data.
         #' @param CI Logical argument: should the function return confidence
         #' intervals for the parameters? Default: FALSE.
         #' @param level Confidence level (default: 0.95 for 95\% confidence 
@@ -1031,6 +1072,11 @@ SDE <- R6Class(
         #' @param resp Logical (default: TRUE). Should the output be on 
         #' the response scale? If FALSE, the output is on the linear 
         #' predictor scale.
+        #' @param term Name of model term as character string, e.g., "time", 
+        #' or "s(time)". Use \code{$coeff_fe()} and \code{$coeff_re()} methods
+        #' to find names of model terms. This uses fairly naive substring 
+        #' matching, and may not work if one covariate's name is a 
+        #' substring of another one.
         #' 
         #' @return If \code{CI = FALSE}, returns a matrix of point estimates, 
         #' where each row corresponds to one row of \code{new_data}. If 
@@ -1246,6 +1292,19 @@ SDE <- R6Class(
         #' not specified, the mean value is used for numeric variables, and the
         #' first level for factor variables.
         #' @param n_post Number of posterior draws to plot. Default: 100.
+        #' @param show_CI Should confidence bands be plotted rather than posterior
+        #' draws? Can takes values 'none' (default; no confidence bands), 
+        #' 'pointwise' (show pointwise confidence bands obtained with
+        #' \code{\link{CI_pointwise}}), or 'simultaneous' (show simultaneous 
+        #' confidence bands obtained with \code{\link{CI_simultaneous}})
+        #' @param resp Logical (default: TRUE). Should the output be on 
+        #' the response scale? If FALSE, the output is on the linear 
+        #' predictor scale.
+        #' @param term Name of model term as character string, e.g., "time", 
+        #' or "s(time)". Use \code{$coeff_fe()} and \code{$coeff_re()} methods
+        #' to find names of model terms. This uses fairly naive substring 
+        #' matching, and may not work if one covariate's name is a 
+        #' substring of another one.
         #' 
         #' @return A ggplot object
         plot_par = function(var, par_names = NULL, covs = NULL, n_post = 100,

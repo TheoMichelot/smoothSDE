@@ -40,23 +40,24 @@ Contains the model formulas and data.
 \item \href{#method-update_coeff_re}{\code{SDE$update_coeff_re()}}
 \item \href{#method-update_lambda}{\code{SDE$update_lambda()}}
 \item \href{#method-update_rho}{\code{SDE$update_rho()}}
-\item \href{#method-message}{\code{SDE$message()}}
-\item \href{#method-print}{\code{SDE$print()}}
-\item \href{#method-ind_fixcoeff}{\code{SDE$ind_fixcoeff()}}
 \item \href{#method-make_mat}{\code{SDE$make_mat()}}
 \item \href{#method-make_mat_grid}{\code{SDE$make_mat_grid()}}
 \item \href{#method-setup}{\code{SDE$setup()}}
 \item \href{#method-fit}{\code{SDE$fit()}}
+\item \href{#method-linear_predictor}{\code{SDE$linear_predictor()}}
 \item \href{#method-par}{\code{SDE$par()}}
-\item \href{#method-get_term}{\code{SDE$get_term()}}
 \item \href{#method-post_coeff}{\code{SDE$post_coeff()}}
 \item \href{#method-post_par}{\code{SDE$post_par()}}
-\item \href{#method-CI}{\code{SDE$CI()}}
+\item \href{#method-CI_pointwise}{\code{SDE$CI_pointwise()}}
+\item \href{#method-CI_simultaneous}{\code{SDE$CI_simultaneous()}}
 \item \href{#method-predict_par}{\code{SDE$predict_par()}}
 \item \href{#method-residuals}{\code{SDE$residuals()}}
 \item \href{#method-edf}{\code{SDE$edf()}}
 \item \href{#method-simulate}{\code{SDE$simulate()}}
 \item \href{#method-plot_par}{\code{SDE$plot_par()}}
+\item \href{#method-ind_fixcoeff}{\code{SDE$ind_fixcoeff()}}
+\item \href{#method-message}{\code{SDE$message()}}
+\item \href{#method-print}{\code{SDE$print()}}
 \item \href{#method-clone}{\code{SDE$clone()}}
 }
 }
@@ -402,36 +403,6 @@ Update decay parameter
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-message"></a>}}
-\if{latex}{\out{\hypertarget{method-message}{}}}
-\subsection{Method \code{message()}}{
-Print SDE and parameter formulas
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{SDE$message()}\if{html}{\out{</div>}}
-}
-
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-print"></a>}}
-\if{latex}{\out{\hypertarget{method-print}{}}}
-\subsection{Method \code{print()}}{
-Print SDE object
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{SDE$print()}\if{html}{\out{</div>}}
-}
-
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-ind_fixcoeff"></a>}}
-\if{latex}{\out{\hypertarget{method-ind_fixcoeff}{}}}
-\subsection{Method \code{ind_fixcoeff()}}{
-Indices of fixed coefficients in coeff_fe
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{SDE$ind_fixcoeff()}\if{html}{\out{</div>}}
-}
-
-}
-\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-make_mat"></a>}}
 \if{latex}{\out{\hypertarget{method-make_mat}{}}}
 \subsection{Method \code{make_mat()}}{
@@ -534,6 +505,59 @@ accessed using the method \code{res}.
 }
 }
 \if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-linear_predictor"></a>}}
+\if{latex}{\out{\hypertarget{method-linear_predictor}{}}}
+\subsection{Method \code{linear_predictor()}}{
+Get linear predictor for SDE parameters
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{SDE$linear_predictor(
+  new_data = NULL,
+  t = "all",
+  X_fe = NULL,
+  X_re = NULL,
+  coeff_fe = NULL,
+  coeff_re = NULL,
+  term = NULL
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{new_data}}{Optional data set of covariates. If \code{new_data},
+\code{X_fe} and \code{X_re} are not provided, then the observed 
+covariates are used.}
+
+\item{\code{t}}{Time points for which the parameters should be returned.
+If "all", returns parameters for all time steps (default).}
+
+\item{\code{X_fe}}{Optional design matrix for fixed effects, as returned
+by \code{make_mat}. If \code{new_data}, \code{X_fe} and \code{X_re} 
+are not provided, then the observed covariates are used.}
+
+\item{\code{X_re}}{Optional design matrix for random effects, as returned
+by \code{make_mat}. If \code{new_data}, \code{X_fe} and \code{X_re} 
+are not provided, then the observed covariates are used.}
+
+\item{\code{coeff_fe}}{Optional vector of fixed effect parameters}
+
+\item{\code{coeff_re}}{Optional vector of random effect parameters}
+
+\item{\code{term}}{Name of model term as character string, e.g., "time", 
+or "s(time)". Use \code{$coeff_fe()} and \code{$coeff_re()} methods
+to find names of model terms. This uses fairly naive substring 
+matching, and may not work if one covariate's name is a 
+substring of another one.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Matrix of linear predictor 
+(X_fe %*% coeff_fe + X_re %*% coeff_re) 
+with one row for each time step and one column for each SDE parameter
+}
+}
+\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-par"></a>}}
 \if{latex}{\out{\hypertarget{method-par}{}}}
 \subsection{Method \code{par()}}{
@@ -541,11 +565,13 @@ Get SDE parameters
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{SDE$par(
   t = 1,
+  new_data = NULL,
   X_fe = NULL,
   X_re = NULL,
   coeff_fe = NULL,
   coeff_re = NULL,
-  resp = TRUE
+  resp = TRUE,
+  term = NULL
 )}\if{html}{\out{</div>}}
 }
 
@@ -554,6 +580,10 @@ Get SDE parameters
 \describe{
 \item{\code{t}}{Time points for which the parameters should be returned.
 If "all", returns parameters for all time steps. Default: 1.}
+
+\item{\code{new_data}}{Optional data set of covariates. If \code{new_data},
+\code{X_fe} and \code{X_re} are not provided, then the observed 
+covariates are used.}
 
 \item{\code{X_fe}}{Optional design matrix for fixed effects, as returned
 by \code{make_mat}. By default, uses design matrix from data.}
@@ -568,61 +598,18 @@ by \code{make_mat}. By default, uses design matrix from data.}
 \item{\code{resp}}{Logical (default: TRUE). Should the output be on 
 the response scale? If FALSE, the output is on the linear 
 predictor scale.}
+
+\item{\code{term}}{Name of model term as character string, e.g., "time", 
+or "s(time)". Use \code{$coeff_fe()} and \code{$coeff_re()} methods
+to find names of model terms. This uses fairly naive substring 
+matching, and may not work if one covariate's name is a 
+substring of another one.}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
 Matrix with one row for each time point in t, and one
 column for each SDE parameter
-}
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-get_term"></a>}}
-\if{latex}{\out{\hypertarget{method-get_term}{}}}
-\subsection{Method \code{get_term()}}{
-Extract effect of one term
-
-This uses fairly naive substring matching using grep, and may not work
-if one covariate's name is a substring of another one.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{SDE$get_term(
-  term,
-  t = "all",
-  resp = FALSE,
-  X_fe = NULL,
-  X_re = NULL,
-  coeff_fe = NULL,
-  coeff_re = NULL
-)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{term}}{Name of term as character string, e.g. "time", 
-or "s(time)"}
-
-\item{\code{t}}{Time points for which the parameters should be returned.
-If "all", returns parameters for all time steps. Default: "all".}
-
-\item{\code{resp}}{Logical (default: FALSE). If TRUE, return values
-on response scale rather than linear predictor scale.}
-
-\item{\code{X_fe}}{Optional design matrix for fixed effects. If not
-provided, defaults to design matrix from data.}
-
-\item{\code{X_re}}{Optional design matrix for random effects. If not
-provided, defaults to design matrix from data.}
-
-\item{\code{coeff_fe}}{Optional vector of fixed effect parameters}
-
-\item{\code{coeff_re}}{Optional vector of random effect parameters}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-Vector of values of effect of 'term' on SDE parameter
-'par' over times of observation
 }
 }
 \if{html}{\out{<hr>}}
@@ -653,7 +640,7 @@ posterior draw
 Posterior draws of SDE parameters (for uncertainty 
 quantification)
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{SDE$post_par(X_fe, X_re, n_post = 100, resp = TRUE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{SDE$post_par(X_fe, X_re, n_post = 100, resp = TRUE, term = NULL)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -668,6 +655,12 @@ quantification)
 \item{\code{resp}}{Logical (default: TRUE). Should the output be on 
 the response scale? If FALSE, the output is on the linear 
 predictor scale.}
+
+\item{\code{term}}{Name of model term as character string, e.g., "time", 
+or "s(time)". Use \code{$coeff_fe()} and \code{$coeff_re()} methods
+to find names of model terms. This uses fairly naive substring 
+matching, and may not work if one covariate's name is a 
+substring of another one.}
 }
 \if{html}{\out{</div>}}
 }
@@ -677,22 +670,33 @@ each SDE parameter, and one layer for each posterior draw
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-CI"></a>}}
-\if{latex}{\out{\hypertarget{method-CI}{}}}
-\subsection{Method \code{CI()}}{
-Confidence intervals for SDE parameters
+\if{html}{\out{<a id="method-CI_pointwise"></a>}}
+\if{latex}{\out{\hypertarget{method-CI_pointwise}{}}}
+\subsection{Method \code{CI_pointwise()}}{
+Pointwise confidence intervals for SDE parameters
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{SDE$CI(X_fe, X_re, level = 0.95, n_post = 1000, resp = TRUE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{SDE$CI_pointwise(
+  new_data = NULL,
+  X_fe = NULL,
+  X_re = NULL,
+  level = 0.95,
+  n_post = 1000,
+  resp = TRUE,
+  term = NULL
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{X_fe}}{Design matrix for fixed effects, as returned
-by \code{make_mat}}
+\item{\code{new_data}}{Optional data frame containing covariate values 
+for which the CIs should be computed}
 
-\item{\code{X_re}}{Design matrix for random effects, as returned
-by \code{make_mat}}
+\item{\code{X_fe}}{Optional design matrix for fixed effects, as returned
+by \code{make_mat}. By default, uses design matrix from data.}
+
+\item{\code{X_re}}{Optional design matrix for random effects, as returned
+by \code{make_mat}. By default, uses design matrix from data.}
 
 \item{\code{level}}{Confidence level (default: 0.95 for 95\% confidence 
 intervals)}
@@ -703,7 +707,13 @@ error, but increase computation time. Defaults to 1000.}
 
 \item{\code{resp}}{Logical (default: TRUE). Should the output be on 
 the response scale? If FALSE, the output is on the linear 
-predictor scale.
+predictor scale.}
+
+\item{\code{term}}{Name of model term as character string, e.g., "time", 
+or "s(time)". Use \code{$coeff_fe()} and \code{$coeff_re()} methods
+to find names of model terms. This uses fairly naive substring 
+matching, and may not work if one covariate's name is a 
+substring of another one.
 
 This method generates pointwise confidence intervals 
 by simulation. That is, it generates \code{n_post} posterior samples 
@@ -725,6 +735,66 @@ List with elements:
 }
 }
 \if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-CI_simultaneous"></a>}}
+\if{latex}{\out{\hypertarget{method-CI_simultaneous}{}}}
+\subsection{Method \code{CI_simultaneous()}}{
+Simultaneous confidence intervals for SDE parameters
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{SDE$CI_simultaneous(
+  new_data = NULL,
+  X_fe = NULL,
+  X_re = NULL,
+  level = 0.95,
+  n_post = 1000,
+  resp = TRUE,
+  term = NULL
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{new_data}}{Optional data frame containing covariate values 
+for which the CIs should be computed}
+
+\item{\code{X_fe}}{Optional design matrix for fixed effects, as returned
+by \code{make_mat}. By default, uses design matrix from data.}
+
+\item{\code{X_re}}{Optional design matrix for random effects, as returned
+by \code{make_mat}. By default, uses design matrix from data.}
+
+\item{\code{level}}{Confidence level (default: 0.95 for 95\% confidence 
+intervals)}
+
+\item{\code{n_post}}{Number of posterior samples from which the confidence
+intervals are calculated. Larger values will reduce approximation
+error, but increase computation time. Defaults to 1000.}
+
+\item{\code{resp}}{Logical (default: TRUE). Should the output be on 
+the response scale? If FALSE, the output is on the linear 
+predictor scale.}
+
+\item{\code{term}}{Name of model term as character string, e.g., "time", 
+or "s(time)". Use \code{$coeff_fe()} and \code{$coeff_re()} methods
+to find names of model terms. This uses fairly naive substring 
+matching, and may not work if one covariate's name is a 
+substring of another one.
+
+This method closely follows the approach suggested by Gavin Simpson at
+fromthebottomoftheheap.net/2016/12/15/simultaneous-interval-revisited/,
+itself based on Section 6.5 of Ruppert et al. (2003).}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+List with elements:
+\itemize{
+  \item{\code{low}}{Matrix of lower bounds of confidence intervals.}
+  \item{\code{upp}}{Matrix of upper bounds of confidence intervals.}
+}
+}
+}
+\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-predict_par"></a>}}
 \if{latex}{\out{\hypertarget{method-predict_par}{}}}
 \subsection{Method \code{predict_par()}}{
@@ -732,18 +802,27 @@ Predict SDE parameters
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{SDE$predict_par(
   new_data = NULL,
+  X_fe = NULL,
+  X_re = NULL,
   CI = FALSE,
   level = 0.95,
   n_post = 1000,
-  resp = TRUE
+  resp = TRUE,
+  term = NULL
 )}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{new_data}}{Data frame containing covariate values for which the
-SDE parameters should be predicted.}
+\item{\code{new_data}}{Optional data frame containing covariate values 
+for which the SDE parameters should be predicted.}
+
+\item{\code{X_fe}}{Optional design matrix for fixed effects, as returned
+by \code{make_mat}. By default, uses design matrix from data.}
+
+\item{\code{X_re}}{Optional design matrix for random effects, as returned
+by \code{make_mat}. By default, uses design matrix from data.}
 
 \item{\code{CI}}{Logical argument: should the function return confidence
 intervals for the parameters? Default: FALSE.}
@@ -758,6 +837,12 @@ approximation error, but increase computation time. Defaults to 1000.}
 \item{\code{resp}}{Logical (default: TRUE). Should the output be on 
 the response scale? If FALSE, the output is on the linear 
 predictor scale.}
+
+\item{\code{term}}{Name of model term as character string, e.g., "time", 
+or "s(time)". Use \code{$coeff_fe()} and \code{$coeff_re()} methods
+to find names of model terms. This uses fairly naive substring 
+matching, and may not work if one covariate's name is a 
+substring of another one.}
 }
 \if{html}{\out{</div>}}
 }
@@ -826,7 +911,15 @@ Input data frame with extra column for simulated time series
 \subsection{Method \code{plot_par()}}{
 Plot observation parameters
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{SDE$plot_par(var, par_names = NULL, covs = NULL, n_post = 100)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{SDE$plot_par(
+  var,
+  par_names = NULL,
+  covs = NULL,
+  n_post = 100,
+  show_CI = "none",
+  resp = TRUE,
+  term = NULL
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -844,12 +937,58 @@ not specified, the mean value is used for numeric variables, and the
 first level for factor variables.}
 
 \item{\code{n_post}}{Number of posterior draws to plot. Default: 100.}
+
+\item{\code{show_CI}}{Should confidence bands be plotted rather than posterior
+draws? Can takes values 'none' (default; no confidence bands), 
+'pointwise' (show pointwise confidence bands obtained with
+\code{\link{CI_pointwise}}), or 'simultaneous' (show simultaneous 
+confidence bands obtained with \code{\link{CI_simultaneous}})}
+
+\item{\code{resp}}{Logical (default: TRUE). Should the output be on 
+the response scale? If FALSE, the output is on the linear 
+predictor scale.}
+
+\item{\code{term}}{Name of model term as character string, e.g., "time", 
+or "s(time)". Use \code{$coeff_fe()} and \code{$coeff_re()} methods
+to find names of model terms. This uses fairly naive substring 
+matching, and may not work if one covariate's name is a 
+substring of another one.}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
 A ggplot object
 }
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ind_fixcoeff"></a>}}
+\if{latex}{\out{\hypertarget{method-ind_fixcoeff}{}}}
+\subsection{Method \code{ind_fixcoeff()}}{
+Indices of fixed coefficients in coeff_fe
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{SDE$ind_fixcoeff()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-message"></a>}}
+\if{latex}{\out{\hypertarget{method-message}{}}}
+\subsection{Method \code{message()}}{
+Print SDE and parameter formulas
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{SDE$message()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-print"></a>}}
+\if{latex}{\out{\hypertarget{method-print}{}}}
+\subsection{Method \code{print()}}{
+Print SDE object
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{SDE$print()}\if{html}{\out{</div>}}
+}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-clone"></a>}}
