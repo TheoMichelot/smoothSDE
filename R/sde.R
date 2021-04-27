@@ -1329,7 +1329,7 @@ SDE <- R6Class(
                 post_df <- as.data.frame.table(post)
                 colnames(post_df) <- c("var", "par", "stratum", "val")
                 post_df$mle = "no"                   
-            } else {
+            } else if (show_CI != "none") {
                 if(show_CI == "pointwise") {
                     CI_fn <- self$CI_pointwise
                 } else if(show_CI == "simultaneous") {
