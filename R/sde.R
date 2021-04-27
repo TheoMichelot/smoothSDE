@@ -981,9 +981,12 @@ SDE <- R6Class(
             n <- nrow(X_fe)/n_par
             
             # Get SE of parameters on linear predictor scale
-            par_linpred <- self$predict_par(X_fe = X_fe, X_re = X_re, CI = TRUE, resp = FALSE, 
-                                            level = level, n_post = n_post, term = term)
-            se_linpred <- (par_linpred$estimate - par_linpred$low)/qnorm((1 + level)/2)
+            par_linpred <- self$par(t = "all", X_fe = X_fe, X_re = X_re, 
+                                    resp = FALSE, term = term)
+            CIpw_linpred <- self$CI_pointwise(X_fe = X_fe, X_re = X_re, 
+                                              level = level, n_post = n_post, 
+                                              resp = FALSE, term = term)
+            se_linpred <- (par_linpred - CIpw_linpred$low)/qnorm((1 + level)/2)
             se_linpred_vec <- as.vector(se_linpred)
             
             # Posterior samples of (estimate - true par) ~ N(0, V)
@@ -1038,91 +1041,13 @@ SDE <- R6Class(
             CIs <- array(sapply(1:n_par, function(i) {
                 par <- names(self$formulas())[i]
                 invlink <- ifelse(resp, yes = self$invlink()[[par]], no = identity)
-                low <- invlink(par_linpred$estimate[,par] - (crit[i] * se_linpred[,par]))
-                upp <- invlink(par_linpred$estimate[,par] + (crit[i] * se_linpred[,par]))
+                low <- invlink(par_linpred[,par] - (crit[i] * se_linpred[,par]))
+                upp <- invlink(par_linpred[,par] + (crit[i] * se_linpred[,par]))
                 return(matrix(c(low, upp), ncol = 2))
             }), dim = c(n, 2, n_par),  dimnames = dimnames)
             
-            # # Split the output by parameter rather than low/upp?
-            # CI_list <- lapply(names(self$formulas()), function(par) {
-            #     CIs[,,par]
-            # })
-            # names(CI_list) <- names(self$formulas())
-            
             CI_list <- list(low = CIs[,"low",], upp = CIs[,"upp",])
-            
             return(CI_list)
-        },
-        
-        #' @description Predict SDE parameters
-        #' 
-        #' @param new_data Optional data frame containing covariate values 
-        #' for which the SDE parameters should be predicted.
-        #' @param X_fe Optional design matrix for fixed effects, as returned
-        #' by \code{make_mat}. By default, uses design matrix from data.
-        #' @param X_re Optional design matrix for random effects, as returned
-        #' by \code{make_mat}. By default, uses design matrix from data.
-        #' @param CI Logical argument: should the function return confidence
-        #' intervals for the parameters? Default: FALSE.
-        #' @param level Confidence level (default: 0.95 for 95\% confidence 
-        #' intervals) if \code{CI = TRUE}.
-        #' @param n_post Number of posterior samples from which the confidence
-        #' intervals are calculated if \code{CI = TRUE}. Larger values will reduce 
-        #' approximation error, but increase computation time. Defaults to 1000.
-        #' @param resp Logical (default: TRUE). Should the output be on 
-        #' the response scale? If FALSE, the output is on the linear 
-        #' predictor scale.
-        #' @param term Name of model term as character string, e.g., "time", 
-        #' or "s(time)". Use \code{$coeff_fe()} and \code{$coeff_re()} methods
-        #' to find names of model terms. This uses fairly naive substring 
-        #' matching, and may not work if one covariate's name is a 
-        #' substring of another one.
-        #' 
-        #' @return If \code{CI = FALSE}, returns a matrix of point estimates, 
-        #' where each row corresponds to one row of \code{new_data}. If 
-        #' \code{CI = TRUE}, returns a list with elements:
-        #' \itemize{
-        #'   \item{\code{estimate}}{Matrix of point estimates}
-        #'   \item{\code{low}}{Matrix of lower bounds of confidence intervals}
-        #'   \item{\code{upp}}{Matrix of upper bounds of confidence intervals}
-        #' }
-        predict_par = function(new_data = NULL, X_fe = NULL, X_re = NULL,
-                               CI = FALSE, level = 0.95, 
-                               n_post = 1e3, resp = TRUE, term = NULL) {
-            # Are there covariates in the observation process model?
-            nocovs <- all(sapply(self$formulas(), function(f) f == ~1))
-            
-            # Check that new_data is provided if necessary, else create dummy dataframe
-            if(is.null(new_data)) {
-                if(nocovs) {
-                    new_data <- data.frame(dummy = 1)
-                }
-            } else if(is.null(X_fe) | is.null(X_re)) {
-                # Model matrices for new_data
-                mats <- self$make_mat(new_data = new_data)
-                X_fe <- mats$X_fe
-                X_re <- mats$X_re
-            } else {
-                stop("'new_data' must be provided if there are covariates in the model")      
-            }
-            
-            # SDE parameters
-            par <- self$par(t = "all", X_fe = X_fe, X_re = X_re, 
-                            resp = resp, term = term)
-            
-            if(CI) {
-                # Confidence intervals
-                CIs <- self$CI_pointwise(X_fe = X_fe, X_re = X_re, 
-                                         level = level, n_post = n_post, 
-                                         resp = resp, term = term)
-                
-                # Return point estimates and confidence interval bounds  
-                preds <- list(estimate = par, low = CIs$low, upp = CIs$upp)
-            } else {
-                preds <- par
-            }
-            
-            return(preds)
         },
         
         ####################

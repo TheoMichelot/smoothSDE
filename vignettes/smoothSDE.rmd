@@ -231,7 +231,7 @@ The package is built around the R6 class `SDE`, which encapsulates the model spe
 
 5. Fit model using the `fit` method.
 
-6. Get parameter estimates using `par` method, uncertainty estimates using `predict_par` method, or visualise results using `plot_par` method.
+6. Get parameter estimates using `par` method, uncertainty estimates using `CI_pointwise` or `CI_simultaneous` methods, or visualise results using `plot_par` method.
 
 For more information about the syntax for `smoothSDE` functions, consult the documentation (`?SDE`), or have a look at the example analyses presented in the following sections.
 
@@ -286,17 +286,18 @@ The smoothing splines captured the oscillating patterns in the diffusion paramet
 
 ```{r ex1-par, fig.width = 6, fig.height = 3, out.width="90%", fig.align = "center"}
 # Get point estimates and CIs for sigma over time
-bm_par <- bm$predict_par(new_data = data, CI = TRUE)
+bm_par <- bm$par(t = "all")
+bm_CI <- bm$CI_pointwise()
 
 # Data frame for point estimates
 bm_par_df <- data.frame(time = times,
-                        sigma = c(sigma, bm_par$estimate[, "sigma"]),
+                        sigma = c(sigma, bm_par[, "sigma"]),
                         type = rep(c("true", "estimated"), each = n))
 
 # Data frame for CIs
 bm_ci_df <- data.frame(time = times,
-                       low = bm_par$low[,"sigma"],
-                       upp = bm_par$upp[,"sigma"])
+                       low = bm_CI$low[,"sigma"],
+                       upp = bm_CI$upp[,"sigma"])
 
 ggplot(bm_par_df, aes(time, sigma, col = type)) +
   scale_color_manual(values = c("firebrick", "royalblue"), name = "") +
@@ -376,17 +377,18 @@ We can visualise the results to check that the estimated parameters correctly ca
 ou$plot_par("time", par_names = c("tau", "kappa"))
 
 # Point estimates and CIs for kappa over time
-ou_par <- ou$predict_par(new_data = data, CI = TRUE)
+ou_par <- ou$par(t = "all")
+ou_CI <- ou$CI_pointwise()
 
 # Data frame for point estimates
 ou_par_df <- data.frame(time = times,
-                        kappa = c(kappa, ou_par$estimate[, "kappa"]),
+                        kappa = c(kappa, ou_par[, "kappa"]),
                         type = rep(c("true", "estimated"), each = n))
 
 # Data frame for CIs
 ou_ci_df <- data.frame(time = times,
-                       low = ou_par$low[, "kappa"],
-                       upp = ou_par$upp[, "kappa"])
+                       low = ou_CI$low[, "kappa"],
+                       upp = ou_CI$upp[, "kappa"])
 
 ggplot(ou_par_df, aes(time, kappa, col = type)) +
   scale_color_manual(values = c("firebrick", "royalblue"), name = "") +
@@ -483,10 +485,12 @@ As described by @michelot2021, these results suggest that this elephant tended t
 new_data <- data.frame(temp = c(20, 30, 40))
 
 # Get estimates and CIs
-par <- my_sde$predict_par(new_data = new_data, CI = TRUE)
+par <- my_sde$par(t = "all", new_data = new_data)
+CI <- my_sde$CI_pointwise(new_data = new_data)
 
 # Estimates and 95% CIs for each temperature value given as input
 par
+CI
 ```
 
 # References
