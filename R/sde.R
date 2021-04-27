@@ -1331,24 +1331,18 @@ SDE <- R6Class(
                 post_df$mle = "no"                   
             } else {
                 if(show_CI == "pointwise") {
-                    CI <- self$CI_pointwise(X_fe = mats$X_fe, X_re = mats$X_re,
-                                            n_post = n_post, level = 0.95,
-                                            resp = resp, term = term)
-                    CI_df <- data.frame(var = mats$new_data[[var]],
-                                        par = rep(names(self$formulas()), each = nrow(CI$low)),
-                                        stratum = "CI",
-                                        low = as.vector(CI$low),
-                                        upp = as.vector(CI$upp))
+                    CI_fn <- self$CI_pointwise
                 } else if(show_CI == "simultaneous") {
-                    CI <- self$CI_simultaneous(X_fe = mats$X_fe, X_re = mats$X_re,
-                                               n_post = n_post, level = 0.95,
-                                               resp = resp, term = term)
-                    CI_df <- data.frame(var = mats$new_data[,var],
-                                        par = rep(names(self$formulas()), each = nrow(CI$low)),
-                                        stratum = "CI",
-                                        low = as.vector(CI$low),
-                                        upp = as.vector(CI$upp))
+                    CI_fn <- self$CI_simultaneous
                 }
+                CI <- CI_fn(X_fe = mats$X_fe, X_re = mats$X_re,
+                            n_post = n_post, level = 0.95,
+                            resp = resp, term = term)
+                CI_df <- data.frame(var = mats$new_data[,var],
+                                    par = rep(names(self$formulas()), each = nrow(CI$low)),
+                                    stratum = "CI",
+                                    low = as.vector(CI$low),
+                                    upp = as.vector(CI$upp))
             }
             
             # Data frame for MLE
