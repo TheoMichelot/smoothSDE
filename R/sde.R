@@ -1105,6 +1105,16 @@ SDE <- R6Class(
             return(res)
         },
         
+        #' Conditional Akaike Information Criterion
+        #' 
+        #' The conditional AIC is for example defined by 
+        #' Wood (2017), as AIC = - 2L + 2k where L is the
+        #' maximum joint log-likelihood (of fixed and random
+        #' effects), and k is the number of effective degrees
+        #' of freedom of the model (accounting for flexibility
+        #' in non-parametric terms implied by smoothing)
+        #' 
+        #' @return Conditional AIC
         AIC_conditional = function() {
             # Fixed effect DF
             edf <- length(self$out()$par) - length(self$lambda())
