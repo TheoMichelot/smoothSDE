@@ -97,41 +97,13 @@ cov_grid <- function(var, data, covs = NULL, formulas) {
     return(new_data)
 }
 
-#' Compute effective degrees of freedom for a smooth term (i.e., GAM)
-#'
-#' This function is adapted from Dave Miller's code in the
-#' package CTMCdive
-#'
-#' @param X_re Design matrix for random effects 
-#' @param S Smoothing matrix 
-#' @param lambda Smoothing parameter
-#'
-#' @return Trace of F = (Xt X + sp*S)^-1 Xt X
-edf_smooth <- function(X_re, S, lambda) {
-    # EDF = 0 if no smooth term
-    if(length(lambda) == 0) {
-        return(0)
-    }
-    
-    # Duplicate lambda enough times
-    lambda <- rep(lambda, nrow(S))
-    
-    # Calculate lambda * S
-    Sbig <- S * lambda
-    
-    # Calculate the hat matrix
-    XtX <- t(X_re) %*% X_re
-    Fi <- solve(XtX + Sbig)
-    F <- Fi %*% XtX
-    
-    # Return the trace
-    return(sum(diag(F)))
-}
-
 #' logLik function for SDE objects
 #' 
 #' This function makes it possible to call generic R methods such
-#' as AIC and BIC on SDE objects.
+#' as AIC and BIC on SDE objects. It is based on the number of
+#' degrees of freedom of the *conditional* AIC (rather than
+#' marginal AIC), i.e., including degrees of freedom from the
+#' smooth/random effect components o the model.
 #' 
 #' @param object SDE model object
 #' @param ... For compatibility with S3 method
@@ -141,8 +113,10 @@ edf_smooth <- function(X_re, S, lambda) {
 #' 
 #' @export
 logLik.SDE <- function(object, ...) {
-    val <- -object$out()$value 
-    attributes(val)$df <- object$edf()
+    par_all <- c(object$tmb_rep()$par.fixed, 
+                 object$tmb_rep()$par.random)
+    val <- - object$tmb_obj_joint()$fn(par_all)
+    attributes(val)$df <- object$edf_conditional()
     attributes(val)$nobs <- nrow(object$data())
     class(val) <- "logLik"
     return(val)

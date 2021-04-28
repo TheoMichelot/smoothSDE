@@ -233,6 +233,22 @@ SDE <- R6Class(
             return(private$tmb_obj_)
         },
         
+        #' @description Model object created by TMB for the joint likelihood of
+        #' the fixed and random effects. This is the output of the TMB function 
+        #' \code{MakeADFun}, and it is a list including elements
+        #' \itemize{
+        #'   \item{\code{fn}}{Objective function}
+        #'   \item{\code{gr}}{Gradient function of fn}
+        #'   \item{\code{par}}{Vector of initial parameters on working scale}
+        #' }
+        tmb_obj_joint = function() {
+            if(is.null(private$tmb_obj_joint_)) {
+                stop("Setup model first")
+            }
+            
+            return(private$tmb_obj_joint_)
+        },
+        
         #' @description Output of the TMB function \code{sdreport}, which includes 
         #' estimates and standard errors for all model parameters.
         tmb_rep = function() {
@@ -1116,27 +1132,13 @@ SDE <- R6Class(
         #' 
         #' @return Conditional AIC
         AIC_conditional = function() {
-            # Fixed effect DF
-            edf <- length(self$out()$par) - length(self$lambda())
+            # Effective degrees of freedom
+            edf <- self$edf_conditional()
             
             # Joint likelihood
             par_all <- c(self$tmb_rep()$par.fixed, self$tmb_rep()$par.random)
             llk <- - private$tmb_obj_joint_$fn(par_all)
-            
-            if(!is.null(self$tmb_rep()$jointPrecision)) {
-                # Joint covariance matrix
-                Q <- self$tmb_rep()$jointPrecision
-                V <- MASS::ginv(as.matrix(Q))
-                ind_re <- which(colnames(Q) == "coeff_re")
-                V_re <- V[ind_re, ind_re]
-                
-                # Random effect EDF
-                mats <- self$make_mat()
-                X_re <- as.matrix(mats$X_re)
-                I_re <- t(X_re) %*% X_re 
-                edf <- edf + sum(diag(V_re %*% I_re))                
-            }
-            
+
             aic <- - 2 * llk + 2 * edf
             return(aic)
         },
@@ -1164,44 +1166,28 @@ SDE <- R6Class(
         
         #' @description Effective degrees of freedom
         #'
-        #' This function is adapted from Dave Miller's code in the
-        #' package CTMCdive. It is used to compute the AIC and BIC
-        #' of SDE models.
-        edf = function() {
+        #' @return Number of effective degrees of freedom
+        #' (accounting for flexibility in non-parametric 
+        #' terms implied by smoothing)
+        edf_conditional = function() {
             # Degrees of freedom for fixed effects
-            df <- length(self$out()$par) - length(self$lambda())
+            edf <- length(self$out()$par) - length(self$lambda())
             
-            # Get model matrices
-            mats <- self$make_mat()
-            S_list <- mats$S_list
-            X_list <- mats$X_list_re
-            
-            # Smoothness parameters
-            lambda <- self$lambda()
-            
-            # Loop over smooth terms to compute EDF
-            edf <- 0
-            k <- 1
-            for(i in seq_along(S_list)) {
-                if(!is.null(S_list[[i]])) {
-                    X_re <- X_list[[i]]
-                    if(!is.null(self$other_data()$t_decay)) {
-                        # Add effect of decay in X_re if necessary
-                        rho <- exp(self$out()$par["log_decay"])
-                        t_decay <- self$other_data()$t_decay
-                        col_decay <- self$other_data()$col_decay
-                        X_re[,col_decay] <- X_re[,col_decay] * exp(-rho * t_decay)
-                    }
-                    # EDF for this smooth
-                    edf <- edf + edf_smooth(X_re = X_re, 
-                                            S = S_list[[i]], 
-                                            lambda = lambda[k])
-                    k <- k + 1
-                }
+            if(!is.null(self$tmb_rep()$jointPrecision)) {
+                # Joint covariance matrix
+                Q <- self$tmb_rep()$jointPrecision
+                V <- MASS::ginv(as.matrix(Q))
+                ind_re <- which(colnames(Q) == "coeff_re")
+                V_re <- V[ind_re, ind_re]
+                
+                # Random effect EDF
+                mats <- self$make_mat()
+                X_re <- as.matrix(mats$X_re)
+                I_re <- t(X_re) %*% X_re 
+                edf <- edf + sum(diag(V_re %*% I_re)) 
             }
             
-            # Return total of fixed + random EDFs
-            return(df + edf)
+            return(edf)
         },
         
         ################
