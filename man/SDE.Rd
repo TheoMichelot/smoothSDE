@@ -32,6 +32,7 @@ Contains the model formulas and data.
 \item \href{#method-terms}{\code{SDE$terms()}}
 \item \href{#method-out}{\code{SDE$out()}}
 \item \href{#method-tmb_obj}{\code{SDE$tmb_obj()}}
+\item \href{#method-tmb_obj_joint}{\code{SDE$tmb_obj_joint()}}
 \item \href{#method-tmb_rep}{\code{SDE$tmb_rep()}}
 \item \href{#method-obs}{\code{SDE$obs()}}
 \item \href{#method-eqn}{\code{SDE$eqn()}}
@@ -50,9 +51,10 @@ Contains the model formulas and data.
 \item \href{#method-post_par}{\code{SDE$post_par()}}
 \item \href{#method-CI_pointwise}{\code{SDE$CI_pointwise()}}
 \item \href{#method-CI_simultaneous}{\code{SDE$CI_simultaneous()}}
-\item \href{#method-predict_par}{\code{SDE$predict_par()}}
 \item \href{#method-residuals}{\code{SDE$residuals()}}
-\item \href{#method-edf}{\code{SDE$edf()}}
+\item \href{#method-AIC_conditional}{\code{SDE$AIC_conditional()}}
+\item \href{#method-AIC_marginal}{\code{SDE$AIC_marginal()}}
+\item \href{#method-edf_conditional}{\code{SDE$edf_conditional()}}
 \item \href{#method-simulate}{\code{SDE$simulate()}}
 \item \href{#method-plot_par}{\code{SDE$plot_par()}}
 \item \href{#method-ind_fixcoeff}{\code{SDE$ind_fixcoeff()}}
@@ -281,6 +283,23 @@ the TMB function \code{MakeADFun}, and it is a list including elements
 }
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{SDE$tmb_obj()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-tmb_obj_joint"></a>}}
+\if{latex}{\out{\hypertarget{method-tmb_obj_joint}{}}}
+\subsection{Method \code{tmb_obj_joint()}}{
+Model object created by TMB for the joint likelihood of
+the fixed and random effects. This is the output of the TMB function 
+\code{MakeADFun}, and it is a list including elements
+\itemize{
+  \item{\code{fn}}{Objective function}
+  \item{\code{gr}}{Gradient function of fn}
+  \item{\code{par}}{Vector of initial parameters on working scale}
+}
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{SDE$tmb_obj_joint()}\if{html}{\out{</div>}}
 }
 
 }
@@ -795,91 +814,69 @@ List with elements:
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-predict_par"></a>}}
-\if{latex}{\out{\hypertarget{method-predict_par}{}}}
-\subsection{Method \code{predict_par()}}{
-Predict SDE parameters
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{SDE$predict_par(
-  new_data = NULL,
-  X_fe = NULL,
-  X_re = NULL,
-  CI = FALSE,
-  level = 0.95,
-  n_post = 1000,
-  resp = TRUE,
-  term = NULL
-)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{new_data}}{Optional data frame containing covariate values 
-for which the SDE parameters should be predicted.}
-
-\item{\code{X_fe}}{Optional design matrix for fixed effects, as returned
-by \code{make_mat}. By default, uses design matrix from data.}
-
-\item{\code{X_re}}{Optional design matrix for random effects, as returned
-by \code{make_mat}. By default, uses design matrix from data.}
-
-\item{\code{CI}}{Logical argument: should the function return confidence
-intervals for the parameters? Default: FALSE.}
-
-\item{\code{level}}{Confidence level (default: 0.95 for 95\% confidence 
-intervals) if \code{CI = TRUE}.}
-
-\item{\code{n_post}}{Number of posterior samples from which the confidence
-intervals are calculated if \code{CI = TRUE}. Larger values will reduce 
-approximation error, but increase computation time. Defaults to 1000.}
-
-\item{\code{resp}}{Logical (default: TRUE). Should the output be on 
-the response scale? If FALSE, the output is on the linear 
-predictor scale.}
-
-\item{\code{term}}{Name of model term as character string, e.g., "time", 
-or "s(time)". Use \code{$coeff_fe()} and \code{$coeff_re()} methods
-to find names of model terms. This uses fairly naive substring 
-matching, and may not work if one covariate's name is a 
-substring of another one.}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-If \code{CI = FALSE}, returns a matrix of point estimates, 
-where each row corresponds to one row of \code{new_data}. If 
-\code{CI = TRUE}, returns a list with elements:
-\itemize{
-  \item{\code{estimate}}{Matrix of point estimates}
-  \item{\code{low}}{Matrix of lower bounds of confidence intervals}
-  \item{\code{upp}}{Matrix of upper bounds of confidence intervals}
-}
-}
-}
-\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-residuals"></a>}}
 \if{latex}{\out{\hypertarget{method-residuals}{}}}
 \subsection{Method \code{residuals()}}{
 Model residuals
+Conditional Akaike Information Criterion
+
+The conditional AIC is for example defined by 
+Wood (2017), as AIC = - 2L + 2k where L is the
+maximum joint log-likelihood (of fixed and random
+effects), and k is the number of effective degrees
+of freedom of the model (accounting for flexibility
+in non-parametric terms implied by smoothing)
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{SDE$residuals()}\if{html}{\out{</div>}}
 }
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-edf"></a>}}
-\if{latex}{\out{\hypertarget{method-edf}{}}}
-\subsection{Method \code{edf()}}{
-Effective degrees of freedom
-
-This function is adapted from Dave Miller's code in the
-package CTMCdive. It is used to compute the AIC and BIC
-of SDE models.
+\if{html}{\out{<a id="method-AIC_conditional"></a>}}
+\if{latex}{\out{\hypertarget{method-AIC_conditional}{}}}
+\subsection{Method \code{AIC_conditional()}}{
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{SDE$edf()}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{SDE$AIC_conditional()}\if{html}{\out{</div>}}
 }
 
+\subsection{Returns}{
+Conditional AIC
+Marginal Akaike Information Criterion
+
+The marginal AIC is for example defined by 
+Wood (2017), as AIC = - 2L + 2k where L is the
+maximum marginal log-likelihood (of fixed 
+effects), and k is the number of degrees
+of freedom of the fixed effect component of
+the model
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-AIC_marginal"></a>}}
+\if{latex}{\out{\hypertarget{method-AIC_marginal}{}}}
+\subsection{Method \code{AIC_marginal()}}{
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{SDE$AIC_marginal()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+Marginal AIC
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-edf_conditional"></a>}}
+\if{latex}{\out{\hypertarget{method-edf_conditional}{}}}
+\subsection{Method \code{edf_conditional()}}{
+Effective degrees of freedom
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{SDE$edf_conditional()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+Number of effective degrees of freedom
+(accounting for flexibility in non-parametric 
+terms implied by smoothing)
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-simulate"></a>}}
