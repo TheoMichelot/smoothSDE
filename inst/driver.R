@@ -64,6 +64,13 @@ formulas <- list(mu = ~ s(x1, k = 10, bs = "cs"),
                  sigma = ~ s(x1, k = 10, bs = "cs"))
 data <- data.frame(ID = 1, Z = Z, x1 = x1, time = times)
 type <- "BM"
-my_sde <- SDE$new(formulas = formulas, data = data, type = type, response = "Z")
-my_sde$fit(silent = FALSE)
-my_sde$plot_par("x1", n_post = 100)
+sde1 <- SDE$new(formulas = formulas, data = data, type = type, response = "Z")
+sde1$fit(silent = FALSE)
+sde1$plot_par("x1", n_post = 1000, show_CI = "pointwise")
+
+sde0 <- SDE$new(formulas = list(mu = ~1, sigma = ~1), data = data, 
+                type = type, response = "Z")
+sde0$fit()
+
+sde0$AIC_conditional()
+sde1$AIC_conditional()

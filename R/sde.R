@@ -590,6 +590,13 @@ SDE <- R6Class(
             
             # Negative log-likelihood function
             private$tmb_obj_ <- tmb_obj
+            
+            # Joint negative log-likelihood function
+            # (used for conditional AIC)
+            tmb_obj_joint <- MakeADFun(data = tmb_dat, parameters = tmb_par, 
+                                       dll = "smoothSDE", 
+                                       map = map, silent = silent)
+            private$tmb_obj_joint_ <- tmb_obj_joint
         },
         
         #' @description Model fitting
@@ -1098,6 +1105,32 @@ SDE <- R6Class(
             return(res)
         },
         
+        AIC_conditional = function() {
+            # Fixed effect DF
+            edf <- length(self$out()$par) - length(self$lambda())
+            
+            # Joint likelihood
+            par_all <- c(self$tmb_rep()$par.fixed, self$tmb_rep()$par.random)
+            llk <- - private$tmb_obj_joint_$fn(par_all)
+            
+            if(!is.null(self$tmb_rep()$jointPrecision)) {
+                # Joint covariance matrix
+                Q <- self$tmb_rep()$jointPrecision
+                V <- MASS::ginv(as.matrix(Q))
+                ind_re <- which(colnames(Q) == "coeff_re")
+                V_re <- V[ind_re, ind_re]
+                
+                # Random effect EDF
+                mats <- self$make_mat()
+                X_re <- as.matrix(mats$X_re)
+                I_re <- t(X_re) %*% X_re 
+                edf <- edf + sum(diag(V_re %*% I_re))                
+            }
+
+            aic <- - 2 * llk + 2 * edf
+            return(aic)
+        },
+        
         #' @description Effective degrees of freedom
         #'
         #' This function is adapted from Dave Miller's code in the
@@ -1418,6 +1451,7 @@ SDE <- R6Class(
         rho_ = NULL,
         terms_ = NULL,
         tmb_obj_ = NULL,
+        tmb_obj_joint_= NULL,
         out_ = NULL,
         tmb_rep_ = NULL
     )
