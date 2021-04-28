@@ -1136,7 +1136,28 @@ SDE <- R6Class(
                 I_re <- t(X_re) %*% X_re 
                 edf <- edf + sum(diag(V_re %*% I_re))                
             }
-
+            
+            aic <- - 2 * llk + 2 * edf
+            return(aic)
+        },
+        
+        #' Marginal Akaike Information Criterion
+        #' 
+        #' The marginal AIC is for example defined by 
+        #' Wood (2017), as AIC = - 2L + 2k where L is the
+        #' maximum marginal log-likelihood (of fixed 
+        #' effects), and k is the number of degrees
+        #' of freedom of the fixed effect component of
+        #' the model
+        #' 
+        #' @return Marginal AIC
+        AIC_marginal = function() {
+            # Fixed effect DF
+            edf <- length(self$out()$par) - length(self$lambda())
+            
+            # Marginal likelihood
+            llk <- - self$out()$value
+            
             aic <- - 2 * llk + 2 * edf
             return(aic)
         },

@@ -74,3 +74,5 @@ sde0$fit()
 
 sde0$AIC_conditional()
 sde1$AIC_conditional()
+sde0$AIC_marginal()
+sde1$AIC_marginal()
