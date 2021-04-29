@@ -94,16 +94,25 @@ Type nllk_sde(objective_function<Type>* obj) {
             int Sn = ncol_re(i);
             
             // Penalty matrix for this smooth
-            Eigen::SparseMatrix<Type> this_S = S.block(S_start, S_start, Sn, Sn);
+            // (dense matrix for matinvpd and sparse matrix for Quadform)
+            matrix<Type> this_S_dense = S.block(S_start, S_start, Sn, Sn);
+            Eigen::SparseMatrix<Type> this_S = asSparseMatrix(this_S_dense);
             
             // Coefficients for this smooth
             vector<Type> this_coeff_re = coeff_re.segment(S_start, Sn);
             
+            // Get log-determinant of S^(-1) for additive constant
+            Type log_det = 0;
+            matrix<Type> inv_this_S = atomic::matinvpd(this_S_dense, log_det);
+            log_det = - log_det; // det(S^(-1)) = 1/det(S)
+            
             // Add penalty
-            nllk = nllk -
+            nllk = nllk +
+                Type(0.5) * Sn * log(2*M_PI) +
+                Type(0.5) * log_det -
                 Type(0.5) * Sn * log_lambda(i) +
                 Type(0.5) * exp(log_lambda(i)) * 
-                density::GMRF(this_S).Quadform(this_coeff_re);
+                    density::GMRF(this_S).Quadform(this_coeff_re);
             
             // Increase index
             S_start = S_start + Sn;
