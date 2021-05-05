@@ -51,7 +51,8 @@ SDE <- R6Class(
                             "BM-t" = list(mu = identity, sigma = log),
                             "OU" = as.list(c(mu = lapply(1:n_dim, function(i) identity), 
                                              tau = log, kappa = log)),
-                            "CTCRW" = list(beta = log, sigma = log),
+                            "CTCRW" = as.list(c(mu = lapply(1:n_dim, function(i) identity), 
+                                                beta = log, sigma = log)),
                             "ESEAL_SSM" = list(mu = identity, sigma = log))
             
             # Inverse link functions for SDE parameters
@@ -60,7 +61,8 @@ SDE <- R6Class(
                                "BM-t" = list(mu = identity, sigma = exp),
                                "OU" = as.list(c(mu = lapply(1:n_dim, function(i) identity), 
                                                 tau = exp, kappa = exp)),
-                               "CTCRW" = list(beta = exp, sigma = exp),
+                               "CTCRW" = as.list(c(mu = lapply(1:n_dim, function(i) identity), 
+                                                   beta = exp, sigma = exp)),
                                "ESEAL_SSM" = list(mu = identity, sigma = exp))
             
             private$link_ <- link

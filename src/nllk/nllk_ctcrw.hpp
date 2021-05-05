@@ -60,6 +60,22 @@ matrix<Type> makeQ_ctcrw(Type beta, Type sigma, Type dt, int n_dim) {
     return Q;
 }
 
+//' Make B matrix for Kalman filter
+//' 
+//' @param beta Parameter beta of OU velocity process
+//' @param dt Length of time interval
+//' @param n_dim Number of dimensions of CTCRW process
+template<class Type>
+matrix<Type> makeB_ctcrw(Type beta, Type dt, int n_dim) {
+    matrix<Type> B(2*n_dim, n_dim);
+    B.setZero();
+    for(int i = 0; i < n_dim; i++) {
+        B(2*i, i) = 1 - exp(-beta*dt);
+        B(2*i + 1, i) = dt - (1 - exp(-beta*dt))/beta;
+    }
+    return B;
+}
+
 //' Penalised negative log-likelihood for CTCRW
 //' 
 //' This function was inspired by the source code of the package
@@ -113,8 +129,9 @@ Type nllk_ctcrw(objective_function<Type>* obj) {
     }
     
     // Parameters of velocity process
-    vector<Type> beta = exp(par_mat.col(0).array());
-    vector<Type> sigma = exp(par_mat.col(1).array());
+    matrix<Type> mu = par_mat.block(0, 0, n, n_dim).array();
+    vector<Type> beta = exp(par_mat.col(n_dim).array());
+    vector<Type> sigma = exp(par_mat.col(n_dim + 1).array());
     
     //================================//
     // Likelihood using Kalman filter //
@@ -161,10 +178,15 @@ Type nllk_ctcrw(objective_function<Type>* obj) {
             // Compute Kalman filter matrices
             matrix<Type> T = makeT_ctcrw(beta(i), dtimes(i), n_dim);
             matrix<Type> Q = makeQ_ctcrw(beta(i), sigma(i), dtimes(i), n_dim);
+            matrix<Type> B = makeB_ctcrw(beta(i), dtimes(i), n_dim);
             
+            // Mean velocity component of state update
+            vector<Type> mu_i = mu.row(i).transpose();
+            vector<Type> B_times_mu = B * mu_i;
+
             if(R_IsNA(asDouble(obs(i,0)))) {
                 // If missing observation
-                aest = T * aest;
+                aest = T * aest + B_times_mu;
                 Pest = T * Pest * T.transpose() + Q;
             } else {
                 // Measurement residual
@@ -173,7 +195,7 @@ Type nllk_ctcrw(objective_function<Type>* obj) {
                 // Residual covariance
                 F = Z * Pest * Z.transpose() + H;
                 detF = det(F);
-                
+
                 if(detF <= 0) {
                     aest = T * aest;
                     Pest = T * Pest * T.transpose() + Q;
@@ -186,7 +208,7 @@ Type nllk_ctcrw(objective_function<Type>* obj) {
                     // Kalman gain
                     K = T * Pest * Z.transpose() * F.inverse();
                     // Update state estimate
-                    aest = T * aest + K * u;
+                    aest = T * aest + K * u + B_times_mu;
                     // Update estimate covariance
                     L = T - K * Z;
                     Pest = T * Pest * L.transpose() + Q;
