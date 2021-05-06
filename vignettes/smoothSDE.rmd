@@ -58,8 +58,9 @@ Ornstein-Uhlenbeck process    & ``\texttt{OU}''    & mean       & $\mu \in (-\in
                               &         & time scale & $\tau > 0$                  & log \\
                               &         & variance  & $\kappa > 0$                 & log \\
 \midrule
-Continuous-time correlated RW & ``\texttt{CTCRW}'' & reversion  & $\beta > 0$                  & log \\
-                                       &         & diffusion  & $\sigma > 0$                 & log \\
+Continuous-time correlated RW & ``\texttt{CTCRW}'' & mean       & $\mu \in (-\infty, +\infty)$ & identity \\
+                              &                    & reversion  & $\beta > 0$                  & log \\
+                              &                    & diffusion  & $\sigma > 0$                 & log \\
 \bottomrule
 \end{tabular}
 
@@ -166,14 +167,28 @@ The continuous-time correlated random walk (CTCRW), described by @johnson2008, i
 $$
 \begin{cases}
 dZ_t = V_t\ dt \\
-dV_t = -\beta V_t\ dt + \sigma\ dW_t.
+dV_t = \beta (\mu - V_t)\ dt + \sigma\ dW_t.
 \end{cases}
 $$
-In animal movement analyses, $Z_t$ usually denotes the location of the animal at time $t$, and $V_t$ is its velocity. The velocity $V_t$ is modelled with an OU process to capture autocorrelation in speed and direction of movement, and the location $Z_t$ is its integral, i.e.\ $Z_t = \int_{s = 0}^t V_s\ ds$. The parameters of the velocity process are $\beta > 0$, the strength of reversion to the mean, and $\sigma > 0$, the variability of the velocity.
+In animal movement analyses, $Z_t$ usually denotes the location of the animal at time $t$, and $V_t$ is its velocity. The velocity $V_t$ is modelled with an OU process to capture autocorrelation in speed and direction of movement, and the location $Z_t$ is its integral, i.e.\ $Z_t = \int_{s = 0}^t V_s\ ds$. The parameters of the velocity process are $\mu$, the mean velocity (often fixed to zero), $\beta > 0$, the strength of reversion to the mean, and $\sigma > 0$, the variability of the velocity.
+
+Because it is based on an OU process, the CTCRW model can also have identifiability issues for the parameters $\beta$ and $\sigma$. In `smoothSDE`, we use the following parameterisation, suggested by @gurarie2011:
+$$
+\begin{cases}
+\tau = \frac{1}{\beta}\\
+\nu = \frac{\sqrt{\pi} \sigma}{2 \sqrt{\beta}}
+\end{cases}
+$$
+where $\tau > 0$ is the time scale of autocorrelation of the velocity process, and $\nu > 0$ is the mean speed of the CTCRW process. These parameters have a clear interpretation; in particular, in animal tracking studies, they can be linked to the speed and sinuosity of movement, often used to learn about behaviour. (See, for example, the elephant example in Section 3.1 of @michelot2021.)
 
 Simulated examples of the CTCRW process are shown in Figure \@ref(fig:sim-ctcrw). Compared to Brownian motion, realisations of the CTCRW are smooth and display persistence in the direction and speed of change.
 
 ```{r sim-ctcrw, echo = FALSE, fig.width = 5, fig.height = 4, out.width="49%", fig.align = "center", fig.show="hold", fig.cap = "Illustration of 1d and 2d (isotropic) continuous-time correlated random walk."}
+## This uses a time discretization of the CTCRW process, first sampling from
+## an OU process, and then simply deriving the locations as the cumulated
+## sum of velocities. Exact simulation could be achieved using the joint
+## multivariate normal transition density of the velocity and location, but
+## the plots would be virtually identical.
 n <- 500
 times <- seq(0, 100, length = n)
 beta <- 0.1
@@ -215,7 +230,7 @@ $$
 $$
 where, for each parameter, $\beta_0$ is an intercept parameter, and $f_j$ can be a linear, non-linear, or random effect of a covariate $x_{jt}$.
 
-For a more extensive description of varying-coefficient SDEs, including details about model fitting, please refer to @michelot2021.
+The same idea can be used for other SDEs, such as the OU and CTCRW processes. For a more extensive description of varying-coefficient SDEs, including details about model fitting, please refer to @michelot2021.
 
 # Workflow
 
@@ -450,20 +465,24 @@ data <- data.frame(ID = 1,
 head(data)
 ```
 
-In this analysis, we want to look into the effects of external temperature on the elephant's movement. We specify this by expressing both parameters of the CTCRW model (velocity reversion $\beta$ and velocity diffusion $\sigma$) as smooth functions of the temperature. For these smooth terms, we use the syntax from the R package mgcv; here defining cubic regression splines with 10 basis functions and with shrinkage. See the [mgcv documentation](https://stat.ethz.ch/R-manual/R-patched/library/mgcv/html/smooth.terms.html) for more details.
+In this analysis, we want to look into the effects of external temperature on the elephant's movement. We specify this by expressing the parameters of the CTCRW model (time scale $\tau$ and mean speed $\nu$) as smooth functions of the temperature. For these smooth terms, we use the syntax from the R package mgcv; here defining cubic regression splines with 10 basis functions and with shrinkage. See the [mgcv documentation](https://stat.ethz.ch/R-manual/R-patched/library/mgcv/html/smooth.terms.html) for more details.
 
 ``` {r ex3-form}
-formulas <- list(beta = ~ s(temp, k = 10, bs = "cs"), 
-                 sigma = ~ s(temp, k = 10, bs = "cs"))
+formulas <- list(mu1 = ~1, mu2 = ~1,
+                 tau = ~ s(temp, k = 10, bs = "cs"), 
+                 nu = ~ s(temp, k = 10, bs = "cs"))
 ```
 
-Finally, we use the constructor of the SDE class to create an object for this model, passing as input the formulas, data, type of model, and name of response variables.
+Finally, we use the constructor of the SDE class to create an object for this model, passing as input the formulas, data, type of model, and name of response variables. We pass a vector of initial parameter values, from which the numerical optimisation of the likelihood will start for model fitting, and we use the argument `fixpar` to indicate that the mean velocity (i.e., parameters $\mu_1$ and $\mu_2$) should be fixed to zero rather than estimated.
 
 ``` {r ex3-create}
+par0 <- c(mu1 = 0, mu2 = 0, tau = 1, nu = 1)
+
 my_sde <- SDE$new(formulas = formulas, 
                   data = data, 
                   type = "CTCRW", 
-                  response = c("x", "y"))
+                  response = c("x", "y"), 
+                  fixpar = c("mu1", "mu2"))
 ```
 
 Once the model has been created, the parameters can be estimated using the method `fit`:
@@ -475,7 +494,7 @@ my_sde$fit()
 Finally, the relationship between the SDE parameters and the covariates can be plotted with the method `plot_par`. The function can also generate posterior samples for the estimated relationship, to visualise uncertainty. Here, we plot the CTCRW parameters as function of temperature, with 100 posterior samples:
 
 ``` {r ex3-plot, fig.width = 8, fig.height = 3, out.width="100%", fig.align="center"}
-my_sde$plot_par("temp")
+my_sde$plot_par("temp", par_names = c("tau", "nu"))
 ```
 
 As described by @michelot2021, these results suggest that this elephant tended to move less at high temperatures, with a big drop in speed over 40 degrees Celsius. Estimates and point-wise confidence intervals of the SDE parameters can also be computed for given covariate values, using the `predict_par` method.
