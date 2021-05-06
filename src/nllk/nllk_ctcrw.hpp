@@ -130,8 +130,10 @@ Type nllk_ctcrw(objective_function<Type>* obj) {
     
     // Parameters of velocity process
     matrix<Type> mu = par_mat.block(0, 0, n, n_dim).array();
-    vector<Type> beta = exp(par_mat.col(n_dim).array());
-    vector<Type> sigma = exp(par_mat.col(n_dim + 1).array());
+    vector<Type> tau = exp(par_mat.col(n_dim).array());
+    vector<Type> nu = exp(par_mat.col(n_dim + 1).array());
+    vector<Type> beta = 1/tau;
+    vector<Type> sigma = 2 * nu / sqrt(M_PI * tau);
     
     //================================//
     // Likelihood using Kalman filter //

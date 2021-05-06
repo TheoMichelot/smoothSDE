@@ -52,7 +52,7 @@ SDE <- R6Class(
                             "OU" = as.list(c(mu = lapply(1:n_dim, function(i) identity), 
                                              tau = log, kappa = log)),
                             "CTCRW" = as.list(c(mu = lapply(1:n_dim, function(i) identity), 
-                                                beta = log, sigma = log)),
+                                                tau = log, nu = log)),
                             "ESEAL_SSM" = list(mu = identity, sigma = log))
             
             # Inverse link functions for SDE parameters
@@ -62,7 +62,7 @@ SDE <- R6Class(
                                "OU" = as.list(c(mu = lapply(1:n_dim, function(i) identity), 
                                                 tau = exp, kappa = exp)),
                                "CTCRW" = as.list(c(mu = lapply(1:n_dim, function(i) identity), 
-                                                   beta = exp, sigma = exp)),
+                                                   tau = exp, nu = exp)),
                                "ESEAL_SSM" = list(mu = identity, sigma = exp))
             
             private$link_ <- link
@@ -274,8 +274,11 @@ SDE <- R6Class(
                     "BM" = "dZ(t) = mu dt + sigma dW(t)",
                     "BM-t" = "Brownian motion with t-distributed noise",
                     "OU" = "dZ(t) = 1/tau (mu - Z(t)) dt + sqrt(2*kappa/tau) dW(t)",
-                    "CTCRW" = paste0("dV(t) = - beta V(t) dt + sigma dW(t)\n", 
-                                     "dZ(t) = V(t) dt"),
+                    "CTCRW" = paste0("dV(t) = beta (mu - V(t)) dt + sigma dW(t)\n", 
+                                     "dZ(t) = V(t) dt\n",
+                                     "Parameterised in terms of:\n",
+                                     "tau = 1/beta\n",
+                                     "nu = sqrt(pi/beta)*sigma/2"),
                     "ESEAL_SSM" = paste0("dL(t) = mu dt + sigma dW(t)\n", 
                                          "Z(i) ~ N(a1 + a2 L(i)/R(i), tau^2/h(i))"))
             
