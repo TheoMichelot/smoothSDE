@@ -80,7 +80,7 @@ SDE <- R6Class(
                               paste(names(invlink), collapse = ", "))
                 stop(err)
             }
-            if(any(sapply(self$formulas()[fixpar], function(f) f != ~1))) {
+            if(any(sapply(self$formulas()[fixpar], function(f) {f != ~1}))) {
                 stop("formulas should be ~1 for fixed parameters")
             }
             
@@ -940,6 +940,9 @@ SDE <- R6Class(
                                 level = 0.95, n_post = 1e3, 
                                 resp = TRUE, term = NULL) {
             if(is.null(X_fe) | is.null(X_re)) {
+                if(is.null(new_data)) {
+                    new_data <- self$data()[1,]
+                }
                 mats <- self$make_mat(new_data = new_data)
                 X_fe <- mats$X_fe
                 X_re <- mats$X_re
@@ -954,13 +957,12 @@ SDE <- R6Class(
             alpha <- (1 - level)/2
             CI <- apply(post_par, c(1, 2), quantile, probs = c(alpha, 1 - alpha))
             
-            # Format matrices for lower and upper bounds
-            low <- CI[1,,]
-            upp <- CI[2,,]
-            colnames(low) <- names(self$formulas())
-            colnames(upp) <- names(self$formulas())
+            # Array with one row per parameter, columns for lower/upper bounds,
+            # and one layer for each time step
+            CI <- aperm(CI, c(3, 1, 2))
+            dimnames(CI)[[2]] <- c("low", "upp")
             
-            return(list(low = low, upp = upp))
+            return(CI)
         },
         
         #' @description Simultaneous confidence intervals for SDE parameters
@@ -999,6 +1001,9 @@ SDE <- R6Class(
                                    resp = TRUE, term = NULL) {
             # Use new_data to get design matrices if not provided
             if(is.null(X_fe) | is.null(X_re)) {
+                if(is.null(new_data)) {
+                    new_data <- self$data()[1,]
+                }
                 mats <- self$make_mat(new_data = new_data)
                 X_fe <- mats$X_fe
                 X_re <- mats$X_re
@@ -1015,7 +1020,7 @@ SDE <- R6Class(
             CIpw_linpred <- self$CI_pointwise(X_fe = X_fe, X_re = X_re, 
                                               level = level, n_post = n_post, 
                                               resp = FALSE, term = term)
-            se_linpred <- (par_linpred - CIpw_linpred$low)/qnorm((1 + level)/2)
+            se_linpred <- (par_linpred - t(CIpw_linpred[,"low",]))/qnorm((1 + level)/2)
             se_linpred_vec <- as.vector(se_linpred)
             
             # Posterior samples of (estimate - true par) ~ N(0, V)
@@ -1075,8 +1080,8 @@ SDE <- R6Class(
                 return(matrix(c(low, upp), ncol = 2))
             }), dim = c(n, 2, n_par),  dimnames = dimnames)
             
-            CI_list <- list(low = CIs[,"low",], upp = CIs[,"upp",])
-            return(CI_list)
+            CIs <- aperm(CIs, c(3, 2, 1))
+            return(CIs)
         },
         
         ####################
@@ -1311,19 +1316,17 @@ SDE <- R6Class(
                 colnames(post_df) <- c("var", "par", "stratum", "val")
                 post_df$mle = "no"                   
             } else if (show_CI != "none") {
-                if(show_CI == "pointwise") {
-                    CI_fn <- self$CI_pointwise
-                } else if(show_CI == "simultaneous") {
-                    CI_fn <- self$CI_simultaneous
-                }
+                CI_fn <- ifelse(show_CI == "pointwise", 
+                                yes = self$CI_pointwise, 
+                                no = self$CI_simultaneous)
                 CI <- CI_fn(X_fe = mats$X_fe, X_re = mats$X_re,
                             n_post = n_post, level = 0.95,
                             resp = resp, term = term)
                 CI_df <- data.frame(var = mats$new_data[,var],
-                                    par = rep(names(self$formulas()), each = nrow(CI$low)),
+                                    par = rep(names(self$formulas()), each = dim(CI)[3]),
                                     stratum = "CI",
-                                    low = as.vector(CI$low),
-                                    upp = as.vector(CI$upp))
+                                    low = as.vector(t(CI[,"low",])),
+                                    upp = as.vector(t(CI[,"upp",])))
             }
             
             # Data frame for MLE
