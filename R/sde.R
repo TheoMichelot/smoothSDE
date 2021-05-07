@@ -273,7 +273,7 @@ SDE <- R6Class(
             switch (self$type(),
                     "BM" = "dZ(t) = mu dt + sigma dW(t)",
                     "BM-t" = "Brownian motion with t-distributed noise",
-                    "OU" = paste0("dZ(t) = beta (mu - Z(t)) dt + sigma dW(t)",
+                    "OU" = paste0("dZ(t) = beta (mu - Z(t)) dt + sigma dW(t)\n",
                                   "Parameterised in terms of:\n",
                                   "tau = 1/beta\n",
                                   "kappa = sigma^2/(2*beta)"),
