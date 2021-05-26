@@ -25,6 +25,7 @@ Type nllk_sde(objective_function<Type>* obj) {
     DATA_SPARSE_MATRIX(X_re); // Design matrix for random effects
     DATA_SPARSE_MATRIX(S); // Penalty matrix
     DATA_IVECTOR(ncol_re); // Number of columns of S and X_re for each random effect
+    DATA_INTEGER(include_penalty); // If this is 0, don't include penalty
     DATA_VECTOR(other_data); // Optional extra data needed to evaluate the likelihood
     DATA_VECTOR(t_decay);
     DATA_IVECTOR(col_decay);
@@ -84,7 +85,7 @@ Type nllk_sde(objective_function<Type>* obj) {
     //===================//
     Type nllk = -llk;
     // Are there random effects?
-    if(ncol_re(0) > 0) {
+    if(ncol_re(0) > 0 & include_penalty) {
         // Index in matrix S
         int S_start = 0;
         

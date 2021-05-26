@@ -541,7 +541,8 @@ SDE <- R6Class(
                             X_fe = X_fe,
                             X_re = X_re,
                             S = S,
-                            ncol_re = ncol_re)
+                            ncol_re = ncol_re,
+                            include_penalty = 1)
             
             # Model-specific data objects
             if(self$type() == "BM-t") {
@@ -616,8 +617,9 @@ SDE <- R6Class(
             # Negative log-likelihood function
             private$tmb_obj_ <- tmb_obj
             
-            # Joint negative log-likelihood function
+            # Joint negative log-likelihood function excluding penalty
             # (used for conditional AIC)
+            tmb_dat$include_penalty <- 0
             tmb_obj_joint <- MakeADFun(data = tmb_dat, parameters = tmb_par, 
                                        dll = "smoothSDE", 
                                        map = map, silent = silent)
@@ -1135,6 +1137,77 @@ SDE <- R6Class(
             return(res)
         },
         
+        #' @description Compute goodness-of-fit statistics using simulation
+        #' 
+        #' @param gof_fn Goodness-of-fit function which accepts "data" as input
+        #' and returns a statistic: either a vector or a single number. 
+        #' @param nsims Number of simulations to perform 
+        #' @param full If model fit with MCMC then full set to TRUE will sample from
+        #' posterior for each simulation 
+        #' @param silent Logical. If FALSE, simulation progress is shown. 
+        #' (Default: TRUE)
+        #' 
+        #' @return List with elements:
+        #' \itemize{
+        #'   \item{obs_stat}{Vector of values of goodness-of-fit statistics for the
+        #'   observed data}
+        #'   \item{stats}{Matrix of values of goodness-of-fit statistics for the
+        #'   simulated data sets (one row for each statistic, and one column for each
+        #'   simulation)}
+        #'   \item{plot}{ggplot object}
+        #' }
+        gof = function(gof_fn, nsims = 100, full = FALSE, silent = FALSE) {
+            # Evaluate statistics for observed data
+            obs_stat <- gof_fn(self$obs()$data())
+            
+            # Simulate from model and evaluate statistics for simulated data
+            stats <- matrix(0, nc = nsims, nr = length(obs_stat))
+            for (sim in 1:nsims) {
+                if (!silent) cat("Simulating", sim, " / ", nsims, "\r")
+                
+                # if full and mcmc then sample parameter
+                if (full & !is.null(private$mcmc_)) {
+                    self$update_par(iter = sample(1:nrow(self$iters()), size = 1))
+                }
+                
+                # simulate new data
+                newdat <- self$simulate(n = nrow(self$obs()$data()), 
+                                        data = self$obs()$data(),
+                                        silent = TRUE) 
+                # compute statistics
+                stats[,sim] <- gof_fn(newdat)
+            }
+            
+            # Get names of statistics
+            if(is.null(names(obs_stat))) {
+                stat_names <- paste("statistic", 1:length(obs_stat))
+                names(obs_stat) <- stat_names
+            } else {
+                stat_names <- names(obs_stat)
+            }
+            rownames(stats) <- stat_names
+            
+            # Data frames for ggplot (observed and simulated values)
+            df_obs <- as.data.frame.table(as.matrix(obs_stat))
+            colnames(df_obs) <- c("stat", "sim", "val")
+            df <- as.data.frame.table(stats)
+            colnames(df) <- c("stat", "sim", "val")
+            
+            # Create plot
+            p <- ggplot(df, aes(val)) + 
+                geom_histogram(bins = 20, aes(y=..density..), col = "white", 
+                               bg = "lightgrey", na.rm = TRUE) +
+                facet_wrap("stat", scales = "free") + 
+                geom_vline(aes(xintercept = val), data = df_obs) +
+                xlab("statistic") + ggtitle("Vertical line is observed value") +
+                theme_light() +
+                theme(strip.background = element_blank(),
+                      strip.text = element_text(colour = "black"))
+            if (!silent) plot(p)
+            
+            return(list(obs_stat = obs_stat, stats = stats, plot = p))
+        }, 
+        
         #' Conditional Akaike Information Criterion
         #' 
         #' The conditional AIC is for example defined by 
@@ -1188,17 +1261,21 @@ SDE <- R6Class(
             edf <- length(self$out()$par) - length(self$lambda())
             
             if(!is.null(self$tmb_rep()$jointPrecision)) {
+                # Get Hessian of joint neg log-likelihood
+                par_all <- c(self$tmb_rep()$par.fixed, self$tmb_rep()$par.random)
+                H <- self$tmb_obj_joint()$he(par_all)
+                
                 # Joint covariance matrix
                 Q <- self$tmb_rep()$jointPrecision
                 V <- MASS::ginv(as.matrix(Q))
+                
+                # Subset to random effect components
                 ind_re <- which(colnames(Q) == "coeff_re")
                 V_re <- V[ind_re, ind_re]
-                
+                H_re <- H[ind_re, ind_re]
+
                 # Random effect EDF
-                mats <- self$make_mat()
-                X_re <- as.matrix(mats$X_re)
-                I_re <- t(X_re) %*% X_re 
-                edf <- edf + sum(diag(V_re %*% I_re)) 
+                edf <- edf + sum(diag(H_re %*% V_re))
             }
             
             return(edf)
