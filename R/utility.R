@@ -142,3 +142,32 @@ term_indices <- function(names_fe, names_re, term) {
     
     return(list(fe = wh_keep_fe, re = wh_keep_re))
 }
+
+#' Get covariance matrix from precision matrix
+#' 
+#' The covariance matrix is the inverse of the precision matrix. By default,
+#' the function \code{solve} is used for inversion. If it fails (e.g.,
+#' singular system), then \code{MASS::ginv} is used instead, and returns the
+#' Moore-Penrose generalised inverse of the precision matrix.
+#' 
+#' @param prec_mat Precision matrix (either of 'matrix' type
+#' or sparse matrix on which as.matrix can be used)
+#' 
+#' @return Precision matrix
+#' 
+#' @importFrom MASS ginv
+#' @export
+prec_to_cov <- function(prec_mat)
+{
+    cov_mat <- try(as.matrix(solve(prec_mat)), silent = TRUE)
+    if(inherits(cov_mat, "try-error")) {
+        message <- attr(cov_mat, 'condition')$message
+        cov_mat <- MASS::ginv(as.matrix(prec_mat))
+        warning(paste0("Inversion of precision matrix using 'solve' failed: ", 
+                       message, ". Using 'MASS::ginv' instead (uncertainty ",
+                       "estimates may be unreliable)."))
+    }
+    colnames(cov_mat) <- colnames(prec_mat)
+    rownames(cov_mat) <- colnames(prec_mat)
+    return(cov_mat)
+}

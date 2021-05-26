@@ -9,7 +9,6 @@
 #' facet_wrap label_bquote xlab ylab ggtitle element_blank element_text geom_point
 #' geom_ribbon
 #' @importFrom TMB MakeADFun sdreport
-#' @importFrom MASS ginv
 #' 
 #' @useDynLib smoothSDE, .registration = TRUE
 #' 
@@ -814,16 +813,7 @@ SDE <- R6Class(
             
             # Joint covariance matrix
             if(!is.null(rep$jointPrecision)) {
-                jointCov <- try(as.matrix(solve(rep$jointPrecision)), silent = TRUE)
-                if(inherits(jointCov, "try-error")) {
-                    message <- attr(jointCov, 'condition')$message
-                    jointCov <- ginv(as.matrix(rep$jointPrecision))
-                    warning(paste0("Inversion of precision matrix using 'solve' failed: ", 
-                                   message, ". Using 'MASS::ginv' instead (uncertainty ",
-                                   "estimates may be unreliable)."))
-                }
-                colnames(jointCov) <- colnames(rep$jointPrecision)
-                rownames(jointCov) <- colnames(jointCov)
+                jointCov <- prec_to_cov(rep$jointPrecision)
             } else {
                 # If there are no random effects
                 jointCov <- rep$cov.fixed
@@ -1267,7 +1257,7 @@ SDE <- R6Class(
                 
                 # Joint covariance matrix
                 Q <- self$tmb_rep()$jointPrecision
-                V <- MASS::ginv(as.matrix(Q))
+                V <- prec_to_cov(Q)
                 
                 # Subset to random effect components
                 ind_re <- which(colnames(Q) == "coeff_re")
