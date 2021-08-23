@@ -178,6 +178,11 @@ $$
 \tau = \frac{1}{\beta}\\
 \nu = \frac{\sqrt{\pi} \sigma}{2 \sqrt{\beta}}
 \end{cases}
+\Leftrightarrow
+\begin{cases}
+\beta = \frac{1}{\tau}\\
+\sigma = \frac{2\nu}{\sqrt{\pi \tau}}
+\end{cases}
 $$
 where $\tau > 0$ is the time scale of autocorrelation of the velocity process, and $\nu > 0$ is the mean speed of the CTCRW process. These parameters have a clear interpretation; in particular, in animal tracking studies, they can be linked to the speed and sinuosity of movement, often used to learn about behaviour. (See, for example, the elephant example in Section 3.1 of @michelot2021.)
 
