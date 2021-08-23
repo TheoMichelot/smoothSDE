@@ -52,6 +52,7 @@ Contains the model formulas and data.
 \item \href{#method-CI_pointwise}{\code{SDE$CI_pointwise()}}
 \item \href{#method-CI_simultaneous}{\code{SDE$CI_simultaneous()}}
 \item \href{#method-residuals}{\code{SDE$residuals()}}
+\item \href{#method-gof}{\code{SDE$gof()}}
 \item \href{#method-AIC_conditional}{\code{SDE$AIC_conditional()}}
 \item \href{#method-AIC_marginal}{\code{SDE$AIC_marginal()}}
 \item \href{#method-edf_conditional}{\code{SDE$edf_conditional()}}
@@ -818,6 +819,46 @@ List with elements:
 \if{latex}{\out{\hypertarget{method-residuals}{}}}
 \subsection{Method \code{residuals()}}{
 Model residuals
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{SDE$residuals()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-gof"></a>}}
+\if{latex}{\out{\hypertarget{method-gof}{}}}
+\subsection{Method \code{gof()}}{
+Compute goodness-of-fit statistics using simulation
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{SDE$gof(gof_fn, nsims = 100, full = FALSE, silent = FALSE)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{gof_fn}}{Goodness-of-fit function which accepts "data" as input
+and returns a statistic: either a vector or a single number.}
+
+\item{\code{nsims}}{Number of simulations to perform}
+
+\item{\code{full}}{If model fit with MCMC then full set to TRUE will sample from
+posterior for each simulation}
+
+\item{\code{silent}}{Logical. If FALSE, simulation progress is shown. 
+(Default: TRUE)}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+List with elements:
+\itemize{
+  \item{obs_stat}{Vector of values of goodness-of-fit statistics for the
+  observed data}
+  \item{stats}{Matrix of values of goodness-of-fit statistics for the
+  simulated data sets (one row for each statistic, and one column for each
+  simulation)}
+  \item{plot}{ggplot object}
+}
 Conditional Akaike Information Criterion
 
 The conditional AIC is for example defined by 
@@ -826,10 +867,7 @@ maximum joint log-likelihood (of fixed and random
 effects), and k is the number of effective degrees
 of freedom of the model (accounting for flexibility
 in non-parametric terms implied by smoothing)
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{SDE$residuals()}\if{html}{\out{</div>}}
 }
-
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-AIC_conditional"></a>}}

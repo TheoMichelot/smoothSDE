@@ -20,5 +20,5 @@ This function makes it possible to call generic R methods such
 as AIC and BIC on SDE objects. It is based on the number of
 degrees of freedom of the *conditional* AIC (rather than
 marginal AIC), i.e., including degrees of freedom from the
-smooth/random effect components o the model.
+smooth/random effect components of the model.
 }

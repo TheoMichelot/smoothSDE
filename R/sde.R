@@ -7,7 +7,7 @@
 #' @importFrom mgcv gam rmvn
 #' @importFrom ggplot2 ggplot aes theme_light geom_line theme scale_colour_manual
 #' facet_wrap label_bquote xlab ylab ggtitle element_blank element_text geom_point
-#' geom_ribbon
+#' geom_ribbon scale_size_manual
 #' @importFrom TMB MakeADFun sdreport
 #' 
 #' @useDynLib smoothSDE, .registration = TRUE
