@@ -270,19 +270,19 @@ SDE <- R6Class(
         #' @description Print equation for this model
         eqn = function() {
             switch (self$type(),
-                    "BM" = "dZ(t) = mu dt + sigma dW(t)",
-                    "BM-t" = "Brownian motion with t-distributed noise",
-                    "OU" = paste0("dZ(t) = beta (mu - Z(t)) dt + sigma dW(t)\n",
+                    "BM" = "    dZ(t) = mu dt + sigma dW(t)",
+                    "BM-t" = "    Brownian motion with t-distributed noise",
+                    "OU" = paste0("    dZ(t) = beta (mu - Z(t)) dt + sigma dW(t)\n",
                                   "Parameterised in terms of:\n",
-                                  "tau = 1/beta\n",
-                                  "kappa = sigma^2/(2*beta)"),
-                    "CTCRW" = paste0("dV(t) = beta (mu - V(t)) dt + sigma dW(t)\n", 
-                                     "dZ(t) = V(t) dt\n",
+                                  "* tau = 1/beta\n",
+                                  "* kappa = sigma^2/(2*beta)"),
+                    "CTCRW" = paste0("    dV(t) = beta (mu - V(t)) dt + sigma dW(t)\n", 
+                                     "    dZ(t) = V(t) dt\n",
                                      "Parameterised in terms of:\n",
-                                     "tau = 1/beta\n",
-                                     "nu = sqrt(pi/beta)*sigma/2"),
-                    "ESEAL_SSM" = paste0("dL(t) = mu dt + sigma dW(t)\n", 
-                                         "Z(i) ~ N(a1 + a2 L(i)/R(i), tau^2/h(i))"))
+                                     "* tau = 1/beta\n",
+                                     "* nu = sqrt(pi/beta)*sigma/2"),
+                    "ESEAL_SSM" = paste0("    dL(t) = mu dt + sigma dW(t)\n", 
+                                         "    Z(i) ~ N(a1 + a2 L(i)/R(i), tau^2/h(i))"))
             
         },
         
@@ -610,7 +610,7 @@ SDE <- R6Class(
             
             # Create TMB object
             tmb_obj <- MakeADFun(data = tmb_dat, parameters = tmb_par, 
-                                 dll = "smoothSDE", silent = silent,
+                                 DLL = "smoothSDE", silent = silent,
                                  map = map, random = random)
             
             # Negative log-likelihood function
@@ -620,7 +620,7 @@ SDE <- R6Class(
             # (used for conditional AIC)
             tmb_dat$include_penalty <- 0
             tmb_obj_joint <- MakeADFun(data = tmb_dat, parameters = tmb_par, 
-                                       dll = "smoothSDE", 
+                                       DLL = "smoothSDE", 
                                        map = map, silent = silent)
             private$tmb_obj_joint_ <- tmb_obj_joint
         },
@@ -808,6 +808,8 @@ SDE <- R6Class(
         #' @return Matrix with one column for each coefficient and one row for each
         #' posterior draw
         post_coeff = function(n_post) {
+            # Number of SDE parameters
+            n_par <- length(self$formulas())
             # TMB report
             rep <- self$tmb_rep()
             
@@ -840,7 +842,20 @@ SDE <- R6Class(
             if(!"coeff_re" %in% unique(names)) {
                 post_list$coeff_re <- matrix(NA, nrow = n_post, ncol = 0)
             }
+
+            # Deal with fixed SDE parameters
+            ind_estpar <- which(!names(self$formulas()) %in% self$fixpar())
+            # Indices of estimated coefficients in coeff_fe
+            fe_cols <- rep(1:n_par, self$terms()$ncol_fe)
+            ind_est_fe <- which(fe_cols %in% ind_estpar)
             
+            # In post_fe, set columns for fixed parameters to fixed value,
+            # and use posterior draws for non-fixed parameters
+            post_fe <- matrix(rep(self$coeff_fe(), each = n_post),
+                              nrow = n_post, ncol = sum(self$terms()$ncol_fe))
+            post_fe[,ind_est_fe] <- post_list$coeff_fe
+            post_list$coeff_fe <- post_fe
+
             return(post_list)
         },
         
@@ -866,27 +881,16 @@ SDE <- R6Class(
             n_par <- length(self$formulas())
             # Number of time steps
             n <- nrow(X_fe)/n_par
-            # Indices of non-fixed SDE parameters
-            ind_estpar <- which(!names(self$formulas()) %in% self$fixpar())
-            # Indices of estimated coefficients in coeff_fe
-            fe_cols <- rep(1:n_par, self$terms()$ncol_fe)
-            ind_est_fe <- which(fe_cols %in% ind_estpar)
             
             # Generate posterior draws of coeff_fe and coeff_re
             post_coeff <- self$post_coeff(n_post = n_post)
             
-            # In post_fe, set columns for fixed parameters to fixed value,
-            # and use posterior draws for non-fixed parameters
-            post_fe <- matrix(rep(self$coeff_fe(), each = n_post),
-                              nrow = n_post, ncol = sum(self$terms()$ncol_fe))
-            post_fe[,ind_est_fe] <- post_coeff$coeff_fe
-            post_re <- post_coeff$coeff_re
-            
+            # Get corresponding SDE parameters
             par_array <- array(sapply(1:n_post, function(i) {
                 self$par(t = "all", 
                          X_fe = X_fe, X_re = X_re, 
-                         coeff_fe = post_fe[i,], 
-                         coeff_re = post_re[i,],
+                         coeff_fe = post_coeff$coeff_fe[i,], 
+                         coeff_re = post_coeff$coeff_re[i,],
                          resp = resp, 
                          term = term)  
             }), dim = c(n, n_par, n_post))
@@ -1507,11 +1511,11 @@ SDE <- R6Class(
             
             # Print SDE
             eqn <- self$eqn()
-            message("SDE for ", self$type(), " model:")
+            message("> SDE for ", self$type(), " model:")
             message(eqn, "\n")
             
             # Print parameter formulas
-            message("Formulas for model parameters:")
+            message("> Formulas for model parameters:")
             f <- self$formulas()
             for(i in 1:length(f)) {
                 if(names(f)[i] %in% self$fixpar()) {
@@ -1520,7 +1524,7 @@ SDE <- R6Class(
                     this_form <- as.character(f[[i]])[2]
                     this_form <- gsub("\\+", "+\n\t", this_form)
                 }
-                message(names(f)[i], " ~ ", this_form)
+                message("* ", names(f)[i], " ~ ", this_form)
             }
             cat("\n")
         },
