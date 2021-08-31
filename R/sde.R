@@ -1136,10 +1136,8 @@ SDE <- R6Class(
         #' @description Compute goodness-of-fit statistics using simulation
         #' 
         #' @param gof_fn Goodness-of-fit function which accepts "data" as input
-        #' and returns a statistic: either a vector or a single number. 
-        #' @param nsims Number of simulations to perform 
-        #' @param full If model fit with MCMC then full set to TRUE will sample from
-        #' posterior for each simulation 
+        #' and returns a statistic (either a vector or a single number). 
+        #' @param n_sims Number of simulations to perform 
         #' @param silent Logical. If FALSE, simulation progress is shown. 
         #' (Default: TRUE)
         #' 
@@ -1152,26 +1150,21 @@ SDE <- R6Class(
         #'   simulation)}
         #'   \item{plot}{ggplot object}
         #' }
-        gof = function(gof_fn, nsims = 100, full = FALSE, silent = FALSE) {
+        gof = function(gof_fn, n_sims = 100, silent = FALSE) {
             # Evaluate statistics for observed data
-            obs_stat <- gof_fn(self$obs()$data())
+            obs_stat <- gof_fn(self$data())
             
             # Simulate from model and evaluate statistics for simulated data
-            stats <- matrix(0, nc = nsims, nr = length(obs_stat))
-            for (sim in 1:nsims) {
-                if (!silent) cat("Simulating", sim, " / ", nsims, "\r")
-                
-                # if full and mcmc then sample parameter
-                if (full & !is.null(private$mcmc_)) {
-                    self$update_par(iter = sample(1:nrow(self$iters()), size = 1))
+            stats <- matrix(0, nrow = length(obs_stat), ncol = n_sims)
+            for (sim in 1:n_sims) {
+                if (!silent) {
+                    cat(paste0("Simulation ", sim, "/", n_sims, "\r"))
                 }
-                
-                # simulate new data
-                newdat <- self$simulate(n = nrow(self$obs()$data()), 
-                                        data = self$obs()$data(),
-                                        silent = TRUE) 
-                # compute statistics
-                stats[,sim] <- gof_fn(newdat)
+
+                # Simulate new data
+                new_data <- self$simulate(data = self$data()) 
+                # Compute statistics
+                stats[,sim] <- gof_fn(new_data)
             }
             
             # Get names of statistics
@@ -1199,7 +1192,9 @@ SDE <- R6Class(
                 theme_light() +
                 theme(strip.background = element_blank(),
                       strip.text = element_text(colour = "black"))
-            if (!silent) plot(p)
+            if (!silent) {
+                plot(p)
+            }
             
             return(list(obs_stat = obs_stat, stats = stats, plot = p))
         }, 
