@@ -46,7 +46,8 @@ SDE <- R6Class(
             # Link functions for SDE parameters
             n_dim <- length(response)
             link <- switch (type,
-                            "BM" = list(mu = identity, sigma = log),
+                            "BM" = as.list(c(mu = lapply(1:n_dim, function(i) identity), 
+                                             sigma = log)),
                             "BM-t" = list(mu = identity, sigma = log),
                             "OU" = as.list(c(mu = lapply(1:n_dim, function(i) identity), 
                                              tau = log, kappa = log)),
@@ -56,7 +57,8 @@ SDE <- R6Class(
             
             # Inverse link functions for SDE parameters
             invlink <- switch (type,
-                               "BM" = list(mu = identity, sigma = exp),
+                               "BM" = as.list(c(mu = lapply(1:n_dim, function(i) identity), 
+                                                sigma = exp)),
                                "BM-t" = list(mu = identity, sigma = exp),
                                "OU" = as.list(c(mu = lapply(1:n_dim, function(i) identity), 
                                                 tau = exp, kappa = exp)),

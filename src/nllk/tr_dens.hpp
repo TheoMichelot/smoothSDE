@@ -31,9 +31,9 @@ Type tr_dens(vector<Type> Z1, vector<Type> Z0, Type dtimes, vector<Type> par,
         if(!R_IsNA(asDouble(Z0(i))) && !R_IsNA(asDouble(Z1(i)))) {
             if(type == "BM") {
                 // Brownian motion: dZ_t = mu(t) dt + sigma(t) dW_t
-                // where par = (mu, log(sigma))
-                mean = Z0(i) + par(0) * dtimes;
-                sd = exp(par(1)) * sqrt(dtimes);
+                // where par = (mu_1, mu_2, ..., mu_d, log(sigma))
+                mean = Z0(i) + par(i) * dtimes;
+                sd = exp(par(n_dim)) * sqrt(dtimes);
                 res = res + dnorm(Z1(i), mean, sd, true);
             } else if(type == "BM-t") {
                 // Brownian motion with t-distributed noise
