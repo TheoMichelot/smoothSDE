@@ -48,6 +48,8 @@ SDE <- R6Class(
             link <- switch (type,
                             "BM" = as.list(c(mu = lapply(1:n_dim, function(i) identity), 
                                              sigma = log)),
+                            "BM_SSM" = as.list(c(mu = lapply(1:n_dim, function(i) identity), 
+                                                 sigma = log)),
                             "BM-t" = list(mu = identity, sigma = log),
                             "OU" = as.list(c(mu = lapply(1:n_dim, function(i) identity), 
                                              tau = log, kappa = log)),
@@ -59,6 +61,8 @@ SDE <- R6Class(
             invlink <- switch (type,
                                "BM" = as.list(c(mu = lapply(1:n_dim, function(i) identity), 
                                                 sigma = exp)),
+                               "BM_SSM" = as.list(c(mu = lapply(1:n_dim, function(i) identity), 
+                                                    sigma = exp)),
                                "BM-t" = list(mu = identity, sigma = exp),
                                "OU" = as.list(c(mu = lapply(1:n_dim, function(i) identity), 
                                                 tau = exp, kappa = exp)),
@@ -273,6 +277,8 @@ SDE <- R6Class(
         eqn = function() {
             switch (self$type(),
                     "BM" = "    dZ(t) = mu dt + sigma dW(t)",
+                    "BM_SSM" = paste0("    dY(t) = mu dt + sigma dW(t)\n",
+                                      "    Z(i) ~ N(Y(i), sigma_obs^2)"),
                     "BM-t" = "    Brownian motion with t-distributed noise",
                     "OU" = paste0("    dZ(t) = beta (mu - Z(t)) dt + sigma dW(t)\n",
                                   "Parameterised in terms of:\n",
@@ -546,12 +552,31 @@ SDE <- R6Class(
                             include_penalty = 1)
             
             # Model-specific data objects
-            if(self$type() == "BM-t") {
+            if(self$type() == "BM" | self$type() == "OU") {
+                # No extra data needed for BM and OU models
+                tmb_dat$other_data <- 0  
+            } else if(self$type() == "BM-t") {
                 # Pass degrees of freedom for BM-t model
                 tmb_dat$other_data <- self$other_data()$df
-            } else if(self$type() == "BM" | self$type() == "OU") {
-                # No extra data needed for BM and OU models
-                tmb_dat$other_data <- 0                
+            } else if(self$type() == "BM_SSM") {
+                # Number of dimensions
+                n_dim <- ncol(self$obs())
+                # Define initial state and covariance for Kalman filter
+                # First index for each ID
+                i0 <- c(1, which(self$data()$ID[-n] != self$data()$ID[-1]) + 1)
+                # Initial state = first observation
+                a0 <- as.matrix(self$obs()[i0,])
+                tmb_dat$a0 <- a0
+                # Initial state covariance
+                if(is.null(self$other_data()$P0)) {
+                    # Default if P0 not provided by user
+                    tmb_dat$P0 <- diag(rep(10, n_dim))                    
+                } else {
+                    tmb_dat$P0 <- self$other_data()$P0
+                }
+                
+                # Initialise model-specific parameter (measurement error SD)
+                tmb_par$log_sigma_obs <- 0
             } else if(self$type() == "CTCRW") {
                 # Number of dimensions
                 n_dim <- ncol(self$obs())
@@ -844,7 +869,7 @@ SDE <- R6Class(
             if(!"coeff_re" %in% unique(names)) {
                 post_list$coeff_re <- matrix(NA, nrow = n_post, ncol = 0)
             }
-
+            
             # Deal with fixed SDE parameters
             ind_estpar <- which(!names(self$formulas()) %in% self$fixpar())
             # Indices of estimated coefficients in coeff_fe
@@ -857,7 +882,7 @@ SDE <- R6Class(
                               nrow = n_post, ncol = sum(self$terms()$ncol_fe))
             post_fe[,ind_est_fe] <- post_list$coeff_fe
             post_list$coeff_fe <- post_fe
-
+            
             return(post_list)
         },
         
@@ -1160,7 +1185,7 @@ SDE <- R6Class(
                 if (!silent) {
                     cat(paste0("Simulation ", sim, "/", n_sims, "\r"))
                 }
-
+                
                 # Simulate new data
                 new_data <- self$simulate(data = self$data()) 
                 # Compute statistics
@@ -1216,7 +1241,7 @@ SDE <- R6Class(
             # Joint likelihood
             par_all <- c(self$tmb_rep()$par.fixed, self$tmb_rep()$par.random)
             llk <- - private$tmb_obj_joint_$fn(par_all)
-
+            
             aic <- - 2 * llk + 2 * edf
             return(aic)
         },
@@ -1264,7 +1289,7 @@ SDE <- R6Class(
                 ind_re <- which(colnames(Q) == "coeff_re")
                 V_re <- V[ind_re, ind_re]
                 H_re <- H[ind_re, ind_re]
-
+                
                 # Random effect EDF
                 edf <- edf + sum(diag(H_re %*% V_re))
             }
