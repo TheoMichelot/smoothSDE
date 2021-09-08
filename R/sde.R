@@ -576,7 +576,7 @@ SDE <- R6Class(
                 }
                 
                 # Initialise model-specific parameter (measurement error SD)
-                tmb_par$log_sigma_obs <- 0
+                tmb_par <- c(log_sigma_obs =  0, tmb_par)
             } else if(self$type() == "CTCRW") {
                 # Number of dimensions
                 n_dim <- ncol(self$obs())

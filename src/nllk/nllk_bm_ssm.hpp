@@ -66,6 +66,10 @@ Type nllk_bm_ssm(objective_function<Type>* obj) {
     //============//
     // PARAMETERS //
     //============//
+    // SD of measurement error
+    PARAMETER(log_sigma_obs);
+    Type sigma_obs = exp(log_sigma_obs);
+    
     PARAMETER_VECTOR(coeff_fe); // Fixed effect parameters
     PARAMETER_VECTOR(log_lambda); // Smoothness parameters
     PARAMETER_VECTOR(coeff_re); // Random effect parameters
@@ -82,10 +86,6 @@ Type nllk_bm_ssm(objective_function<Type>* obj) {
     // Parameters of latent process
     matrix<Type> mu = par_mat.block(0, 0, n, n_dim).array();
     vector<Type> sigma = exp(par_mat.col(n_dim).array());
-    
-    // SD of measurement error
-    PARAMETER(log_sigma_obs);
-    Type sigma_obs = exp(log_sigma_obs);
     
     //================================//
     // Likelihood using Kalman filter //
