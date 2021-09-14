@@ -119,6 +119,9 @@ Type nllk_bm_ssm(objective_function<Type>* obj) {
     
     // Kalman filter iterations
     Type llk = 0;
+    matrix<Type> aest_all(n, 2);
+    aest_all.setZero();
+    aest_all.row(0) = aest;
     for(int i = 1; i < n; i++) {
         if(ID(i) != ID(i-1)) {
             // If first location of track, re-initialise state vector
@@ -162,7 +165,11 @@ Type nllk_bm_ssm(objective_function<Type>* obj) {
                 }
             }
         }
+        
+        aest_all.row(i) = aest;
     }
+    
+    REPORT(aest_all)
 
     //===================//
     // Smoothing penalty //
