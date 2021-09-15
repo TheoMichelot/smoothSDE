@@ -307,7 +307,7 @@ The smoothing splines captured the oscillating patterns in the diffusion paramet
 ```{r ex1-par, fig.width = 6, fig.height = 3, out.width="90%", fig.align = "center"}
 # Get point estimates and CIs for sigma over time
 bm_par <- bm$par(t = "all")
-bm_CI <- bm$CI_pointwise()
+bm_CI <- bm$CI_pointwise(t = "all")
 
 # Data frame for point estimates
 bm_par_df <- data.frame(time = times,
@@ -316,8 +316,8 @@ bm_par_df <- data.frame(time = times,
 
 # Data frame for CIs
 bm_ci_df <- data.frame(time = times,
-                       low = bm_CI$low[,"sigma"],
-                       upp = bm_CI$upp[,"sigma"])
+                       low = bm_CI["sigma", "low",],
+                       upp = bm_CI["sigma", "upp",])
 
 ggplot(bm_par_df, aes(time, sigma, col = type)) +
   scale_color_manual(values = c("firebrick", "royalblue"), name = "") +
@@ -398,7 +398,7 @@ ou$plot_par("time", par_names = c("tau", "kappa"))
 
 # Point estimates and CIs for kappa over time
 ou_par <- ou$par(t = "all")
-ou_CI <- ou$CI_pointwise()
+ou_CI <- ou$CI_pointwise(t = "all")
 
 # Data frame for point estimates
 ou_par_df <- data.frame(time = times,
@@ -407,8 +407,8 @@ ou_par_df <- data.frame(time = times,
 
 # Data frame for CIs
 ou_ci_df <- data.frame(time = times,
-                       low = ou_CI$low[, "kappa"],
-                       upp = ou_CI$upp[, "kappa"])
+                       low = ou_CI["kappa", "low",],
+                       upp = ou_CI["kappa", "upp",])
 
 ggplot(ou_par_df, aes(time, kappa, col = type)) +
   scale_color_manual(values = c("firebrick", "royalblue"), name = "") +
@@ -496,13 +496,14 @@ Once the model has been created, the parameters can be estimated using the metho
 my_sde$fit()
 ```
 
-Finally, the relationship between the SDE parameters and the covariates can be plotted with the method `plot_par`. The function can also generate posterior samples for the estimated relationship, to visualise uncertainty. Here, we plot the CTCRW parameters as function of temperature, with 100 posterior samples:
+Finally, the relationship between the SDE parameters and the covariates can be plotted with the method `plot_par`. The function can also generate posterior samples for the estimated relationship, to visualise uncertainty. Here, we plot the CTCRW parameters as function of temperature, with pointwise confidence intervals:
 
 ``` {r ex3-plot, fig.width = 8, fig.height = 3, out.width="100%", fig.align="center"}
-my_sde$plot_par("temp", par_names = c("tau", "nu"))
+my_sde$plot_par("temp", par_names = c("tau", "nu"), 
+                show_CI = "pointwise", n_post = 1e3)
 ```
 
-As described by @michelot2021, these results suggest that this elephant tended to move less at high temperatures, with a big drop in speed over 40 degrees Celsius. Estimates and point-wise confidence intervals of the SDE parameters can also be computed for given covariate values, using the `predict_par` method.
+As described by @michelot2021, these results suggest that this elephant tended to move less at high temperatures, with a big drop in speed ($\nu_t$) over 40 degrees Celsius. Estimates and point-wise confidence intervals of the SDE parameters can also be computed for given covariate values, using the `par` and `CI_pointwise` methods.
 
 ``` {r ex3-predict}
 # Data frame with covariate values for prediction
