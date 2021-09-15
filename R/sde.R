@@ -33,9 +33,8 @@ SDE <- R6Class(
         #' likelihood
         #' 
         #' @return A new SDE object
-        initialize = function(formulas, data, type, response, par0 = NULL, 
+        initialize = function(formulas = NULL, data, type, response, par0 = NULL, 
                               fixpar = NULL, other_data = NULL) {
-            private$formulas_ <- formulas
             private$type_ <- type
             private$response_ <- response
             private$fixpar_ <- fixpar
@@ -74,7 +73,9 @@ SDE <- R6Class(
             private$invlink_ <- invlink
             
             # Check that "formulas" is of the right length and with right names
-            if(length(formulas) != length(invlink)) {
+            if(is.null(formulas)) {
+                formulas <- lapply(invlink, function(f) return(~1))
+            } else if(length(formulas) != length(invlink)) {
                 err <- paste0("'formulas' should be a list of length ", 
                               length(invlink), " for the model ", type,
                               ", with components ", 
@@ -85,9 +86,10 @@ SDE <- R6Class(
                               paste(names(invlink), collapse = ", "))
                 stop(err)
             }
-            if(any(sapply(self$formulas()[fixpar], function(f) {f != ~1}))) {
+            if(any(sapply(formulas[fixpar], function(f) {f != ~1}))) {
                 stop("formulas should be ~1 for fixed parameters")
             }
+            private$formulas_ <- formulas
             
             # Check that data has an "ID" column, and that it's a factor
             if(!any(colnames(data) == "ID")) {
