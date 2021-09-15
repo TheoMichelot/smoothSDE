@@ -973,12 +973,25 @@ SDE <- R6Class(
         #'   \item{\code{low}}{Matrix of lower bounds of confidence intervals.}
         #'   \item{\code{upp}}{Matrix of upper bounds of confidence intervals.}
         #' }
-        CI_pointwise = function(new_data = NULL, X_fe = NULL, X_re = NULL, 
+        CI_pointwise = function(t = NULL, new_data = NULL, 
+                                X_fe = NULL, X_re = NULL, 
                                 level = 0.95, n_post = 1e3, 
                                 resp = TRUE, term = NULL) {
+            # Default t = 1, unless new data are provided (then t = all)
+            if(is.null(t)) {
+                if(!is.null(new_data) | !is.null(X_fe) | !is.null(X_re)) {
+                    t <- "all"
+                } else {
+                    t <- 1   
+                }
+            }
+
             if(is.null(X_fe) | is.null(X_re)) {
                 if(is.null(new_data)) {
-                    new_data <- self$data()[1,]
+                    new_data <- self$data()
+                }
+                if(t != "all") {
+                    new_data <- new_data[t,]
                 }
                 mats <- self$make_mat(new_data = new_data)
                 X_fe <- mats$X_fe
@@ -1033,13 +1046,25 @@ SDE <- R6Class(
         #'   \item{\code{low}}{Matrix of lower bounds of confidence intervals.}
         #'   \item{\code{upp}}{Matrix of upper bounds of confidence intervals.}
         #' }
-        CI_simultaneous = function(new_data = NULL, X_fe = NULL, X_re = NULL, 
+        CI_simultaneous = function(t = NULL, new_data = NULL, 
+                                   X_fe = NULL, X_re = NULL, 
                                    level = 0.95, n_post = 1000, 
                                    resp = TRUE, term = NULL) {
-            # Use new_data to get design matrices if not provided
+            # Default t = 1, unless new data are provided (then t = all)
+            if(is.null(t)) {
+                if(!is.null(new_data) | !is.null(X_fe) | !is.null(X_re)) {
+                    t <- "all"
+                } else {
+                    t <- 1   
+                }
+            }
+            
             if(is.null(X_fe) | is.null(X_re)) {
                 if(is.null(new_data)) {
-                    new_data <- self$data()[1,]
+                    new_data <- self$data()
+                }
+                if(t != "all") {
+                    new_data <- new_data[t,]
                 }
                 mats <- self$make_mat(new_data = new_data)
                 X_fe <- mats$X_fe
