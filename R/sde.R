@@ -804,10 +804,19 @@ SDE <- R6Class(
         #' 
         #' @return Matrix with one row for each time point in t, and one
         #' column for each SDE parameter
-        par = function(t = 1, new_data = NULL, 
+        par = function(t = NULL, new_data = NULL, 
                        X_fe = NULL, X_re = NULL,
                        coeff_fe = NULL, coeff_re = NULL, 
                        resp = TRUE, term = NULL) {
+            # Default t = 1, unless new data are provided (then t = all)
+            if(is.null(t)) {
+                if(!is.null(new_data) | !is.null(X_fe) | !is.null(X_re)) {
+                    t <- "all"
+                } else {
+                    t <- 1   
+                }
+            }
+            
             # Get linear predictor
             lp_mat <- self$linear_predictor(new_data = new_data, t = t, 
                                             X_fe = X_fe, X_re = X_re,
