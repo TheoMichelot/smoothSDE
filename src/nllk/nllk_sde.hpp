@@ -71,12 +71,15 @@ Type nllk_sde(objective_function<Type>* obj) {
     //============//
     // Initialise log-likelihood
     Type llk = 0;
+    vector<Type> llk_all(n);
+    llk_all.setZero();
     // Loop over observations
     for(int i = 1; i < n; i ++) {
         // No contribution if first observation of the track
         if(ID(i-1) == ID(i)) {
-            llk = llk + tr_dens<Type>(obs.row(i), obs.row(i-1), dtimes(i-1),
-                                      par_mat.row(i-1), true, type, other_data);
+            llk_all(i) = tr_dens<Type>(obs.row(i), obs.row(i-1), dtimes(i-1),
+                    par_mat.row(i-1), true, type, other_data);
+            llk = llk + llk_all(i);
         }
     }
     
@@ -112,8 +115,8 @@ Type nllk_sde(objective_function<Type>* obj) {
                 Type(0.5) * Sn * log(2*M_PI) +
                 Type(0.5) * log_det -
                 Type(0.5) * Sn * log_lambda(i) +
-                Type(0.5) * exp(log_lambda(i)) * 
-                    density::GMRF(this_S).Quadform(this_coeff_re);
+                Type(0.5) * exp(log_lambda(i)) *
+                density::GMRF(this_S).Quadform(this_coeff_re);
             
             // Increase index
             S_start = S_start + Sn;

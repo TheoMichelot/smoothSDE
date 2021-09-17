@@ -52,6 +52,8 @@ SDE <- R6Class(
                             "BM-t" = list(mu = identity, sigma = log),
                             "OU" = as.list(c(mu = lapply(1:n_dim, function(i) identity), 
                                              tau = log, kappa = log)),
+                            "CIR" = as.list(c(mu = lapply(1:n_dim, function(i) log), 
+                                              beta = log, sigma = log)),
                             "CTCRW" = as.list(c(mu = lapply(1:n_dim, function(i) identity), 
                                                 tau = log, nu = log)),
                             "ESEAL_SSM" = list(mu = identity, sigma = log))
@@ -65,6 +67,8 @@ SDE <- R6Class(
                                "BM-t" = list(mu = identity, sigma = exp),
                                "OU" = as.list(c(mu = lapply(1:n_dim, function(i) identity), 
                                                 tau = exp, kappa = exp)),
+                               "CIR" = as.list(c(mu = lapply(1:n_dim, function(i) exp), 
+                                                 beta = exp, sigma = exp)),
                                "CTCRW" = as.list(c(mu = lapply(1:n_dim, function(i) identity), 
                                                    tau = exp, nu = exp)),
                                "ESEAL_SSM" = list(mu = identity, sigma = exp))
@@ -554,10 +558,7 @@ SDE <- R6Class(
                             include_penalty = 1)
             
             # Model-specific data objects
-            if(self$type() == "BM" | self$type() == "OU") {
-                # No extra data needed for BM and OU models
-                tmb_dat$other_data <- 0  
-            } else if(self$type() == "BM-t") {
+            if(self$type() == "BM-t") {
                 # Pass degrees of freedom for BM-t model
                 tmb_dat$other_data <- self$other_data()$df
             } else if(self$type() == "BM_SSM") {
@@ -614,10 +615,13 @@ SDE <- R6Class(
                 tmb_dat$h <- self$data()$h
                 # Non-lipid tissue mass
                 tmb_dat$R <- self$data()$R
+            } else {
+                # Unused for BM, OU, CIR...
+                tmb_dat$other_data <- 0
             }
             
             # Decaying response model
-            if(self$type() %in% c("BM", "BM-t", "OU")) {
+            if(self$type() %in% c("BM", "BM-t", "OU", "CIR")) {
                 if(!is.null(self$other_data()$t_decay)) {
                     if(any(self$other_data()$col_decay > length(self$terms()$names_re_all))) {
                         stop(paste0("'col_decay' should be between 1 and ", 
@@ -1584,12 +1588,12 @@ SDE <- R6Class(
                 }
                 message("* ", names(f)[i], " ~ ", this_form)
             }
-            cat("\n")
+            message()
         },
         
         #' @description Print SDE object
         print = function() {
-            self$message()  
+            self$message()
         }
     ),
     

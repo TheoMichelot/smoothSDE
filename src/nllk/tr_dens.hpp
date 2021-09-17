@@ -50,7 +50,22 @@ Type tr_dens(vector<Type> Z1, vector<Type> Z0, Type dtimes, vector<Type> par,
                 sd = sqrt(exp(par(n_dim+1)) * 
                     (1 - exp(-2 * dtimes / exp(par(n_dim)))));
                 res = res + dnorm(Z1(i), mean, sd, true);
-            }            
+            } else if(type == "CIR") {
+                // Cox-Ingersoll-Ross model:
+                // dZ_t = beta(t) (mu(t) - Z_t) dt + sigma(t) sqrt(Z_t) dW_t
+                // where par = log(mu_1), ..., log(mu_d), log(beta), log(sigma)
+                Type mu = exp(par(0));
+                Type beta = exp(par(n_dim));
+                Type sigma = exp(par(n_dim + 1));
+
+                Type c = 2 * beta / ((1 - exp(-beta*dtimes)) * sigma * sigma);
+                Type q = 2 * beta * mu / (sigma * sigma) - 1;
+                Type u = c * Z0(i) * exp(-beta*dtimes);
+                Type v = c * Z1(i);
+                Type b = besselI(2 * sqrt(u * v), q);
+
+                res = res + log(c) - u - v + q/2 * (log(v) - log(u)) + log(b);
+            }       
         }
     }
     
