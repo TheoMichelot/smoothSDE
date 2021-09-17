@@ -1591,9 +1591,29 @@ SDE <- R6Class(
             message()
         },
         
+        #' Print parameter values for t = 1
+        print_par = function() {
+            if(is.null(private$out_)) {
+                message("> Initial SDE parameters (t = 1):")
+            } else {
+                message("> Estimated SDE parameters (t = 1):")
+                CI <- round(self$CI_pointwise(t = 1), 3)
+            }
+            par <- self$par(t = 1)
+            
+            for(i in 1:length(par)) {
+                msg <- paste0("* ", colnames(par)[i], " = ",  round(par[i], 3))
+                if(!is.null(private$out_)) {
+                    msg <- paste0(msg, "\t (", CI[i, 1,], ", ", CI[i, 2,], ")")
+                }
+                message(msg)
+            }
+        },
+        
         #' @description Print SDE object
         print = function() {
             self$message()
+            self$print_par()
         }
     ),
     
