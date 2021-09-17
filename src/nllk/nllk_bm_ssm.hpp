@@ -119,7 +119,7 @@ Type nllk_bm_ssm(objective_function<Type>* obj) {
     
     // Kalman filter iterations
     Type llk = 0;
-    matrix<Type> aest_all(n, 2);
+    matrix<Type> aest_all(n, n_dim);
     aest_all.setZero();
     aest_all.row(0) = aest;
     for(int i = 1; i < n; i++) {
