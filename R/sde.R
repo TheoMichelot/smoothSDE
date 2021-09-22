@@ -52,6 +52,8 @@ SDE <- R6Class(
                             "BM-t" = list(mu = identity, sigma = log),
                             "OU" = as.list(c(mu = lapply(1:n_dim, function(i) identity), 
                                              tau = log, kappa = log)),
+                            "OU_SSM" = as.list(c(mu = lapply(1:n_dim, function(i) identity), 
+                                                 tau = log, kappa = log)),
                             "CIR" = as.list(c(mu = lapply(1:n_dim, function(i) log), 
                                               beta = log, sigma = log)),
                             "CTCRW" = as.list(c(mu = lapply(1:n_dim, function(i) identity), 
@@ -67,6 +69,8 @@ SDE <- R6Class(
                                "BM-t" = list(mu = identity, sigma = exp),
                                "OU" = as.list(c(mu = lapply(1:n_dim, function(i) identity), 
                                                 tau = exp, kappa = exp)),
+                               "OU_SSM" = as.list(c(mu = lapply(1:n_dim, function(i) identity), 
+                                                    tau = exp, kappa = exp)),
                                "CIR" = as.list(c(mu = lapply(1:n_dim, function(i) exp), 
                                                  beta = exp, sigma = exp)),
                                "CTCRW" = as.list(c(mu = lapply(1:n_dim, function(i) identity), 
@@ -290,6 +294,11 @@ SDE <- R6Class(
                                   "Parameterised in terms of:\n",
                                   "* tau = 1/beta\n",
                                   "* kappa = sigma^2/(2*beta)"),
+                    "OU_SSM" = paste0("    dZ(t) = beta (mu - Z(t)) dt + sigma dW(t)\n",
+                                      "    Z(i) ~ N(Y(i), sigma_obs^2)\n",
+                                      "Parameterised in terms of:\n",
+                                      "* tau = 1/beta\n",
+                                      "* kappa = sigma^2/(2*beta)"),
                     "CTCRW" = paste0("    dV(t) = beta (mu - V(t)) dt + sigma dW(t)\n", 
                                      "    dZ(t) = V(t) dt\n",
                                      "Parameterised in terms of:\n",
@@ -561,7 +570,7 @@ SDE <- R6Class(
             if(self$type() == "BM-t") {
                 # Pass degrees of freedom for BM-t model
                 tmb_dat$other_data <- self$other_data()$df
-            } else if(self$type() == "BM_SSM") {
+            } else if(self$type() == "BM_SSM" | self$type() == "OU_SSM") {
                 # Number of dimensions
                 n_dim <- ncol(self$obs())
                 # Define initial state and covariance for Kalman filter
@@ -989,7 +998,7 @@ SDE <- R6Class(
                     t <- 1   
                 }
             }
-
+            
             if(is.null(X_fe) | is.null(X_re)) {
                 if(is.null(new_data)) {
                     new_data <- self$data()
