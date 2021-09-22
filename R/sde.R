@@ -1369,43 +1369,51 @@ SDE <- R6Class(
             # Create SDE parameters
             par <- self$par(t = "all")
             
-            # Initialize vector of simulated observations
-            obs <- rep(NA, nrow(data))
-            
-            # Loop over IDs
-            for(id in seq_along(unique(data$ID))) {
-                # Get relevant rows of data
-                ind <- which(data$ID == unique(data$ID)[id])
-                dtimes <- diff(data$time[ind])
-                sub_n <- length(ind)
-                sub_obs <- rep(z0, sub_n)
-                sub_par <- par[ind,]
+            # Loop over dimensions
+            n_dim <- length(self$response())
+            if(length(z0) < n_dim) {
+                z0 <- rep(z0, n_dim)
+            }
+            for(d in 1:n_dim) {
+                # Initialize vector of simulated observations
+                obs <- rep(NA, nrow(data))
                 
-                if(self$type() == "BM") {
-                    # If BM, generate all increments directly
-                    mean <- sub_par[-sub_n, "mu"] * dtimes
-                    sd <- sub_par[-sub_n, "sigma"] * sqrt(dtimes)
-                    sub_obs <- cumsum(c(z0, rnorm(sub_n - 1, mean = mean, sd = sd)))
-                } else if(self$type() == "OU") {
-                    # If OU, loop over observation times
-                    for(i in 2:sub_n) {
-                        # Generate observation from OU transition density
-                        mean <- exp(- dtimes[i-1] / sub_par[i-1, "tau"]) * sub_obs[i-1] +
-                            (1 - exp(-dtimes[i-1] / sub_par[i-1, "tau"])) * sub_par[i-1, "mu"]
-                        sd <- sqrt(sub_par[i-1, "kappa"] * 
-                                       (1 - exp(-2 * dtimes[i-1] / sub_par[i-1, "tau"])))
-                        sub_obs[i] <- rnorm(n = 1, mean = mean, sd = sd)
+                # Loop over IDs
+                for(id in seq_along(unique(data$ID))) {
+                    # Get relevant rows of data
+                    ind <- which(data$ID == unique(data$ID)[id])
+                    dtimes <- diff(data$time[ind])
+                    sub_n <- length(ind)
+                    sub_obs <- rep(z0[d], sub_n)
+                    sub_par <- par[ind,]
+                    
+                    if(self$type() == "BM") {
+                        # If BM, generate all increments directly
+                        mean <- sub_par[-sub_n, d] * dtimes
+                        sd <- sub_par[-sub_n, n_dim + 1] * sqrt(dtimes)
+                        sub_obs <- cumsum(c(z0[d], rnorm(sub_n - 1, mean = mean, sd = sd)))
+                    } else if(self$type() == "OU") {
+                        # If OU, loop over observation times
+                        for(i in 2:sub_n) {
+                            # Generate observation from OU transition density
+                            mean <- exp(- dtimes[i-1] / sub_par[i-1, n_dim + 1]) * sub_obs[i-1] +
+                                (1 - exp(-dtimes[i-1] / sub_par[i-1, n_dim + 1])) * sub_par[i-1, d]
+                            sd <- sqrt(sub_par[i-1,  n_dim + 2] * 
+                                           (1 - exp(-2 * dtimes[i-1] / sub_par[i-1, n_dim + 1])))
+                            sub_obs[i] <- rnorm(n = 1, mean = mean, sd = sd)
+                        }
+                    } else {
+                        stop(paste("Simulation not implemented yet for", self$type(), "model."))
                     }
-                } else {
-                    stop(paste("Simulation not implemented yet for", self$type(), "model."))
+                    
+                    # Update observation vector
+                    obs[ind] <- sub_obs
                 }
                 
-                # Update observation vector
-                obs[ind] <- sub_obs
+                # Add simulated variable to data frame
+                data[[self$response()[d]]] <- obs
             }
             
-            # Add simulated variable to data frame
-            data[[self$response()]] <- obs
             return(data)
         },
         
