@@ -541,20 +541,6 @@ SDE <- R6Class(
                 tmb_par$log_lambda <- log(self$lambda())
             }
             
-            # Setup fixed parameters
-            if(!is.null(self$fixpar())) {
-                # Indices of fixed coefficients in coeff_fe
-                ind_fixcoeff <- self$ind_fixcoeff()
-                
-                # Define vector with a different integer for each coefficient
-                # to be estimated, and NA for each fixed coefficient
-                coeff_fe_map <- 1:ncol(X_fe)
-                coeff_fe_map[ind_fixcoeff] <- NA
-                
-                # Update map (to be passed to TMB)
-                map <- c(map, list(coeff_fe = factor(coeff_fe_map)))
-            }
-            
             # TMB data object
             tmb_dat <- list(type = self$type(),
                             ID = self$data()$ID,
@@ -627,6 +613,20 @@ SDE <- R6Class(
             } else {
                 # Unused for BM, OU, CIR...
                 tmb_dat$other_data <- 0
+            }
+            
+            # Setup fixed parameters
+            if(!is.null(self$fixpar())) {
+                # Indices of fixed coefficients in coeff_fe
+                ind_fixcoeff <- self$ind_fixcoeff()
+                
+                # Define vector with a different integer for each coefficient
+                # to be estimated, and NA for each fixed coefficient
+                coeff_fe_map <- 1:ncol(X_fe)
+                coeff_fe_map[ind_fixcoeff] <- NA
+                
+                # Update map (to be passed to TMB)
+                map <- c(map, list(coeff_fe = factor(coeff_fe_map)))
             }
             
             # Decaying response model
