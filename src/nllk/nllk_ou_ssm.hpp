@@ -85,6 +85,8 @@ Type nllk_ou_ssm(objective_function<Type>* obj) {
     DATA_MATRIX(a0); // Initial state estimate for Kalman filter
     DATA_MATRIX(P0); // Initial state covariance for Kalman filter
 
+    DATA_ARRAY(H_array); // Covariance matrices for observation error
+    
     // Number of dimensions
     int n_dim = obs.cols();
     // Number of observations
@@ -127,7 +129,7 @@ Type nllk_ou_ssm(objective_function<Type>* obj) {
     // Define all matrices and vectors needed below
     matrix<Type> Z(n_dim, n_dim);
     Z.setIdentity();
-    matrix<Type> H = makeH_bm_ssm(sigma_obs, n_dim);
+    matrix<Type> H = makeH_ou_ssm(sigma_obs, n_dim);
     matrix<Type> T(n_dim, n_dim);
     T.setIdentity();
     matrix<Type> B(n_dim, n_dim);
@@ -166,6 +168,9 @@ Type nllk_ou_ssm(objective_function<Type>* obj) {
             Pest = P0;
         } else {
             // Compute Kalman filter matrices
+            if(H_array.size() > 1) {
+                H = H_array.col(i).matrix();
+            }
             matrix<Type> T = makeT_ou_ssm(tau(i), dtimes(i), n_dim);
             matrix<Type> B = makeB_ou_ssm(tau(i), dtimes(i), n_dim);
             matrix<Type> Q = makeQ_ou_ssm(tau(i), kappa(i), dtimes(i), n_dim);

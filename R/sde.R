@@ -575,6 +575,14 @@ SDE <- R6Class(
                 
                 # Initialise model-specific parameter (measurement error SD)
                 tmb_par <- c(log_sigma_obs =  0, tmb_par)
+                
+                # Check whether observation error is provided by user
+                if(!is.null(self$other_data()$H)) {
+                    tmb_dat$H_array <- self$other_data()$H
+                    map <- c(map, list(log_sigma_obs = factor(NA)))
+                } else {
+                    tmb_dat$H_array <- array(0)
+                }
             } else if(self$type() == "CTCRW") {
                 # Number of dimensions
                 n_dim <- ncol(self$obs())
