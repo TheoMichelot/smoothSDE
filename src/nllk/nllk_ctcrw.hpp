@@ -100,6 +100,8 @@ Type nllk_ctcrw(objective_function<Type>* obj) {
     DATA_MATRIX(a0); // Initial state estimate for Kalman filter
     DATA_MATRIX(P0); // Initial state covariance for Kalman filter
     
+    DATA_ARRAY(H_array); // Covariance matrices for observation error
+    
     // Number of observations
     int n = obs.rows();
     
@@ -170,6 +172,9 @@ Type nllk_ctcrw(objective_function<Type>* obj) {
     
     // Kalman filter iterations
     Type llk = 0;
+    matrix<Type> aest_all(n, 2*n_dim);
+    aest_all.setZero();
+    aest_all.row(0) = aest;
     for(int i = 1; i < n; i++) {
         if(ID(i) != ID(i-1)) {
             // If first location of track, re-initialise state vector
@@ -178,6 +183,9 @@ Type nllk_ctcrw(objective_function<Type>* obj) {
             Pest = P0;
         } else {
             // Compute Kalman filter matrices
+            if(H_array.size() > 1) {
+                H = H_array.col(i).matrix();
+            }
             matrix<Type> T = makeT_ctcrw(beta(i), dtimes(i), n_dim);
             matrix<Type> Q = makeQ_ctcrw(beta(i), sigma(i), dtimes(i), n_dim);
             matrix<Type> B = makeB_ctcrw(beta(i), dtimes(i), n_dim);
@@ -216,8 +224,12 @@ Type nllk_ctcrw(objective_function<Type>* obj) {
                     Pest = T * Pest * L.transpose() + Q;
                 }
             }
-        }
+        }        
+        
+        aest_all.row(i) = aest;
     }
+    
+    REPORT(aest_all)
     
     //===================//
     // Smoothing penalty //

@@ -602,6 +602,13 @@ SDE <- R6Class(
                 } else {
                     tmb_dat$P0 <- self$other_data()$P0
                 }
+                
+                # Check whether observation error is provided by user
+                if(!is.null(self$other_data()$H)) {
+                    tmb_dat$H_array <- self$other_data()$H
+                } else {
+                    tmb_dat$H_array <- array(0)
+                }
             } else if(self$type() == "ESEAL_SSM") {
                 # Define initial state and covariance for Kalman filter
                 # Initial state = initial lipid mass
