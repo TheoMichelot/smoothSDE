@@ -23,6 +23,20 @@ Type det(matrix<Type> M) {
     return det;
 }
 
+//' Make H matrix for Kalman filter
+//'
+//' @param sigma_obs SD of measurement error
+//' @param n_dim Number of dimensions
+template<class Type>
+matrix<Type> makeH_ctcrw(Type sigma_obs, int n_dim) {
+    matrix<Type> H(n_dim, n_dim);
+    H.setZero();
+    for(int i = 0; i < n_dim; i ++) {
+        H(i, i) = sigma_obs * sigma_obs;
+    }
+    return H;
+}
+
 //' Make T matrix for Kalman filter
 //' 
 //' @param beta Parameter beta of OU velocity process
@@ -117,6 +131,10 @@ Type nllk_ctcrw(objective_function<Type>* obj) {
     //============//
     // PARAMETERS //
     //============//
+    // SD of measurement error
+    PARAMETER(log_sigma_obs);
+    Type sigma_obs = exp(log_sigma_obs);
+    
     PARAMETER_VECTOR(coeff_fe); // Fixed effect parameters
     PARAMETER_VECTOR(log_lambda); // Smoothness parameters
     PARAMETER_VECTOR(coeff_re); // Random effect parameters
@@ -146,8 +164,7 @@ Type nllk_ctcrw(objective_function<Type>* obj) {
     for(int i = 0; i < n_dim; i++) {
         Z(i, 2*i) = 1;
     }
-    matrix<Type> H(n_dim, n_dim);
-    H.setZero(); // for now, no measurement error
+    matrix<Type> H = makeH_ctcrw(sigma_obs, n_dim);
     matrix<Type> T(2*n_dim, 2*n_dim);
     matrix<Type> Q(2*n_dim, 2*n_dim);
     matrix<Type> F(n_dim, n_dim);
