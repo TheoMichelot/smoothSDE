@@ -22,15 +22,24 @@ SDE <- R6Class(
         #################
         #' @description Create a SDE object
         #' 
-        #' @param formulas List of formulas for model parameters
+        #' @param formulas List of formulas for model parameters, with one element
+        #' for each SDE parameter. Formulas can use standard R syntax, as well
+        #' as mgcv-style syntax for splines and random effects.
         #' @param data Data frame with covariates, response variable,
         #' time, and ID
-        #' @param type Type of SDE ("BM", "OU"...)
-        #' @param response Vector of names of response variables
-        #' @param par0 Vector of initial values for SDE parameters
+        #' @param type Type of SDE. Options are "BM" (Brownian motion), "OU" (Ornstein-
+        #' Uhlenbeck process), "CTCRW" (continuous-time correlated random walk, a.k.a.
+        #' integrated Ornstein-Uhlenbeck process), "CIR" (Cox-Ingersoll-Ross process),
+        #' "BM_SSM" (BM with measurement error), "OU_SSM" (OU with measurement error),
+        #' "BM-t" (BM with Student's t-distributed increments)
+        #' @param response Name of response variable, correspond to a column name in
+        #' \code{data}. Can be a vector of names if multiple response variables
+        #' @param par0 Vector of initial values for SDE parameters, with one value
+        #' for each SDE parameter. If not provided, parameters are initialised to
+        #' zero on the link scale.
         #' @param fixpar Vector of names of fixed SDE parameters
-        #' @param other_data Named list of data objects to pass to
-        #' likelihood
+        #' @param other_data Named list of data objects to pass to likelihood, only
+        #' required for special models
         #' 
         #' @return A new SDE object
         initialize = function(formulas = NULL, data, type, response, par0 = NULL, 
@@ -500,7 +509,7 @@ SDE <- R6Class(
         ###################
         #' @description TMB setup
         #'  
-        #' This creates an attribute \code{tmb_obj}, which can be used to 
+        #' @details This creates an attribute \code{tmb_obj}, which can be used to 
         #' evaluate the negative log-likelihood function.
         #' 
         #' @param silent Logical. If TRUE, all tracing outputs are hidden (default).
