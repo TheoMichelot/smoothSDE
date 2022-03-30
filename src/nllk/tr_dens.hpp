@@ -54,7 +54,7 @@ Type tr_dens(vector<Type> Z1, vector<Type> Z0, Type dtimes, vector<Type> par,
                 // Cox-Ingersoll-Ross model:
                 // dZ_t = beta(t) (mu(t) - Z_t) dt + sigma(t) sqrt(Z_t) dW_t
                 // where par = log(mu_1), ..., log(mu_d), log(beta), log(sigma)
-                Type mu = exp(par(0));
+                Type mu = exp(par(i));
                 Type beta = exp(par(n_dim));
                 Type sigma = exp(par(n_dim + 1));
 
