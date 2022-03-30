@@ -717,7 +717,10 @@ SDE <- R6Class(
             
             sys_time <- system.time({
                 # Fit model
-                private$out_ <- do.call(optim, private$tmb_obj_)
+                private$out_ <- optim(par = private$tmb_obj_$par,
+                                      fn = private$tmb_obj_$fn, 
+                                      gr = private$tmb_obj_$gr)
+                # private$out_ <- do.call(optim, private$tmb_obj_)
             })
             private$out_$systime <- sys_time
             # Get estimates and precision matrix for all parameters
