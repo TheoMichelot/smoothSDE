@@ -157,8 +157,7 @@ term_indices <- function(names_fe, names_re, term) {
 #' 
 #' @importFrom MASS ginv
 #' @export
-prec_to_cov <- function(prec_mat)
-{
+prec_to_cov <- function(prec_mat) {
     cov_mat <- try(as.matrix(solve(prec_mat)), silent = TRUE)
     if(inherits(cov_mat, "try-error")) {
         message <- attr(cov_mat, 'condition')$message
@@ -170,4 +169,28 @@ prec_to_cov <- function(prec_mat)
     colnames(cov_mat) <- colnames(prec_mat)
     rownames(cov_mat) <- colnames(prec_mat)
     return(cov_mat)
+}
+
+#' Covariance matrix of CTCRW transition density
+#' 
+#' The derivation of these equations is for example included in
+#' Michelot et al. (2019), Stochastic models of animal movement and
+#' habitat selection (Sections 6.2.2.3-6.2.2.4).
+#' 
+#' @param beta Parameter beta of CTCRW model (mean reversion)
+#' @param sigma Parameter sigma of CTCRW model (diffusion)
+#' @param dt Time interval
+#' 
+#' @return Covariance matrix of position/velocity joint 
+#' process
+#' 
+#' @export
+CTCRW_cov <- function(beta, sigma, dt) {
+    Q <- matrix(0, 2, 2)
+    Q[1,1] <- sigma^2/(2*beta) * (1-exp(-2*beta*dt))
+    Q[2,2] <- (sigma/beta)^2 * (dt + (1-exp(-2*beta*dt))/(2*beta) -
+                                    2*(1-exp(-beta*dt))/beta)
+    Q[1,2] <- sigma^2/(2*beta^2) * (1 - 2*exp(-beta*dt) + exp(-2*beta*dt))
+    Q[2,1] <- Q[1,2]
+    return(Q)   
 }

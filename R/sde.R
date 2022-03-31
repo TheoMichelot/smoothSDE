@@ -1398,7 +1398,7 @@ SDE <- R6Class(
             }
             
             # Create SDE parameters
-            par <- self$par(t = "all")
+            par <- self$par(new_data = data)
             
             # Loop over dimensions
             n_dim <- length(self$response())
@@ -1433,6 +1433,36 @@ SDE <- R6Class(
                                            (1 - exp(-2 * dtimes[i-1] / sub_par[i-1, n_dim + 1])))
                             sub_obs[i] <- rnorm(n = 1, mean = mean, sd = sd)
                         }
+                    } else if(self$type() == "CTCRW") {
+                        # Data has one column for velocity and one for position
+                        sub_dat <- matrix(rep(c(0, z0[d]), each = sub_n), nrow = sub_n,
+                                          dimnames = list(NULL, c("v", "z")))
+                        
+                        # Unpack parameters
+                        mu <- sub_par[, d]
+                        tau <- sub_par[, n_dim + 1]
+                        nu <- sub_par[, n_dim + 2]
+                        beta <- 1/tau
+                        sigma <- 2 * nu / sqrt(tau * pi)
+                        
+                        # Loop over time steps
+                        mean <- rep(NA, 2)
+                        for(i in 2:sub_n) {
+                            # Mean of next state vector (V, Z)
+                            p <- exp(-beta[i-1] * dtimes[i-1])
+                            mean[1] <- p * sub_dat[i-1, "v"] + (1 - p) * mu[i-1]
+                            mean[2] <- sub_dat[i-1, "z"] + mu[i-1] * dtimes[i-1] +
+                                (sub_dat[i-1, "v"] - mu[i-1]) / beta[i-1] * (1 - p)
+                            
+                            # Covariance of next state vector
+                            V <- CTCRW_cov(beta = beta[i-1], sigma = sigma[i-1], 
+                                           dt = dtimes[i-1])
+                            
+                            sub_dat[i,] <- rmvn(1, mu = mean, V = V)
+                        }
+                        
+                        # Only return location (and not velocity)
+                        sub_obs <- sub_dat[,"z"]
                     } else {
                         stop(paste("Simulation not implemented yet for", self$type(), "model."))
                     }
