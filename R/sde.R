@@ -1169,6 +1169,9 @@ SDE <- R6Class(
             abs_dev <- abs(sweep(sim_dev, 1, se_linpred_vec, FUN = "/"))
             abs_dev_array <- array(abs_dev, dim = c(n, n_par, n_post))
             
+            # Replace 0/0 = NaN by zero (case where there is no deviation)
+            abs_dev_array[which(is.nan(abs_dev_array))] <- 0
+            
             # Take maximum
             max_abs_dev <- apply(abs_dev_array, c(2, 3), max)
             
