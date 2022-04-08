@@ -912,16 +912,17 @@ SDE <- R6Class(
                 stop("Check TMB parameter order (should be fixed first, then random)")
             
             # Posterior draws from MVN(par_all, jointCov)
-            post_coeff <- rmvn(n = n_post, mu = par_all, V = jointCov)
+            post_coeff <- matrix(rmvn(n = n_post, mu = par_all, V = jointCov), 
+                                 ncol = ncol(jointCov))
             
             # Split matrix into list of matrices
-            names <- colnames(post_coeff)
-            post_list <- lapply(unique(names), function(name) 
-                post_coeff[, which(names == name), drop = FALSE])
-            names(post_list) <- unique(names)
+            names_coeff <- colnames(jointCov)
+            post_list <- lapply(unique(names_coeff), function(name) 
+                post_coeff[, which(names_coeff == name), drop = FALSE])
+            names(post_list) <- unique(names_coeff)
             
             # Add empty vector for coeff_re if no random effects
-            if(!"coeff_re" %in% unique(names)) {
+            if(!"coeff_re" %in% unique(names_coeff)) {
                 post_list$coeff_re <- matrix(NA, nrow = n_post, ncol = 0)
             }
             
@@ -937,6 +938,10 @@ SDE <- R6Class(
                               nrow = n_post, ncol = sum(self$terms()$ncol_fe))
             post_fe[,ind_est_fe] <- post_list$coeff_fe
             post_list$coeff_fe <- post_fe
+            
+            # Set column names
+            colnames(post_list$coeff_fe) <- self$terms()$names_fe
+            colnames(post_list$coeff_re) <- self$terms()$names_re_all
             
             return(post_list)
         },
@@ -1389,9 +1394,12 @@ SDE <- R6Class(
         #' times of observations, and columns for covariates if necessary.
         #' @param z0 Optional value for first observation of simulated time series.
         #' Default: 0.
+        #' @param posterior Logical. If TRUE, the parameters used for the simulation
+        #' are drawn from their posterior distribution using \text{SDE$post_coeff}, 
+        #' therefore accounting for uncertainty.
         #' 
         #' @return Input data frame with extra column for simulated time series
-        simulate = function(data, z0 = 0) {
+        simulate = function(data, z0 = 0, posterior = FALSE) {
             # Check that data includes times of observations
             if(is.null(data$time)) {
                 stop("'data' should have a column named 'time'")
@@ -1401,8 +1409,17 @@ SDE <- R6Class(
             }
             
             # Create SDE parameters
-            par <- self$par(new_data = data)
-            
+            if(posterior) {
+                # Use posterior draw for coeff_fe/re
+                coeff <- self$post_coeff(n_post = 1)
+                par <- self$par(new_data = data, 
+                                coeff_fe = coeff$coeff_fe[1,],
+                                coeff_re = coeff$coeff_re[1,])
+            } else {
+                # Use point estimates of coeff_fe/re
+                par <- self$par(new_data = data)
+            }
+
             # Loop over dimensions
             n_dim <- length(self$response())
             if(length(z0) < n_dim) {
