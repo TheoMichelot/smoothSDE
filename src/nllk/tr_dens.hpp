@@ -10,9 +10,9 @@
 //' @param par Vector of SDE parameters on working scale (transformed to
 //' natural scale within this function)
 //' @param give_log Logical. Should the log-density be returned?
-//' @param type String for model type ("BM", "BM-t" or "OU")
+//' @param type String for model type ("BM", "BM_t" or "OU")
 //' @param other_data Vector for any additional data needed; e.g., the number
-//' of degrees of freedom for BM-t
+//' of degrees of freedom for BM_t
 //' 
 //' @return Transition density from Z0 to Z1
 template<class Type>
@@ -35,7 +35,7 @@ Type tr_dens(vector<Type> Z1, vector<Type> Z0, Type dtimes, vector<Type> par,
                 mean = Z0(i) + par(i) * dtimes;
                 sd = exp(par(n_dim)) * sqrt(dtimes);
                 res = res + dnorm(Z1(i), mean, sd, true);
-            } else if(type == "BM-t") {
+            } else if(type == "BM_t") {
                 // Brownian motion with t-distributed noise
                 Type df = other_data(0); // number of degrees of freedom
                 mean = par(0) * dtimes;

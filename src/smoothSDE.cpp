@@ -11,7 +11,7 @@ Type objective_function<Type>::operator() () {
     // SDE type
     DATA_STRING(type);
     
-    if (type == "BM" || type == "BM-t" || type == "OU" || type == "CIR") {
+    if (type == "BM" || type == "BM_t" || type == "OU" || type == "CIR") {
         return nllk_sde(this);
     } else if (type == "BM_SSM") {
         return(nllk_bm_ssm(this));

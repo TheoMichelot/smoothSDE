@@ -99,7 +99,7 @@ time, and ID}
 Uhlenbeck process), "CTCRW" (continuous-time correlated random walk, a.k.a.
 integrated Ornstein-Uhlenbeck process), "CIR" (Cox-Ingersoll-Ross process),
 "BM_SSM" (BM with measurement error), "OU_SSM" (OU with measurement error),
-"BM-t" (BM with Student's t-distributed increments)}
+"BM_t" (BM with Student's t-distributed increments)}
 
 \item{\code{response}}{Name of response variable, correspond to a column name in
 \code{data}. Can be a vector of names if multiple response variables}
@@ -952,7 +952,7 @@ times of observations, and columns for covariates if necessary.}
 Default: 0.}
 
 \item{\code{posterior}}{Logical. If TRUE, the parameters used for the simulation
-are drawn from their posterior distribution using \text{SDE$post_coeff}, 
+are drawn from their posterior distribution using \code{SDE$post_coeff}, 
 therefore accounting for uncertainty.}
 }
 \if{html}{\out{</div>}}

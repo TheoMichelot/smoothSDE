@@ -31,7 +31,7 @@ SDE <- R6Class(
         #' Uhlenbeck process), "CTCRW" (continuous-time correlated random walk, a.k.a.
         #' integrated Ornstein-Uhlenbeck process), "CIR" (Cox-Ingersoll-Ross process),
         #' "BM_SSM" (BM with measurement error), "OU_SSM" (OU with measurement error),
-        #' "BM-t" (BM with Student's t-distributed increments)
+        #' "BM_t" (BM with Student's t-distributed increments)
         #' @param response Name of response variable, correspond to a column name in
         #' \code{data}. Can be a vector of names if multiple response variables
         #' @param par0 Vector of initial values for SDE parameters, with one value
@@ -58,7 +58,7 @@ SDE <- R6Class(
                                              sigma = log)),
                             "BM_SSM" = as.list(c(mu = lapply(1:n_dim, function(i) identity), 
                                                  sigma = log)),
-                            "BM-t" = list(mu = identity, sigma = log),
+                            "BM_t" = list(mu = identity, sigma = log),
                             "OU" = as.list(c(mu = lapply(1:n_dim, function(i) identity), 
                                              tau = log, kappa = log)),
                             "OU_SSM" = as.list(c(mu = lapply(1:n_dim, function(i) identity), 
@@ -75,7 +75,7 @@ SDE <- R6Class(
                                                 sigma = exp)),
                                "BM_SSM" = as.list(c(mu = lapply(1:n_dim, function(i) identity), 
                                                     sigma = exp)),
-                               "BM-t" = list(mu = identity, sigma = exp),
+                               "BM_t" = list(mu = identity, sigma = exp),
                                "OU" = as.list(c(mu = lapply(1:n_dim, function(i) identity), 
                                                 tau = exp, kappa = exp)),
                                "OU_SSM" = as.list(c(mu = lapply(1:n_dim, function(i) identity), 
@@ -298,7 +298,7 @@ SDE <- R6Class(
                     "BM" = "    dZ(t) = mu dt + sigma dW(t)",
                     "BM_SSM" = paste0("    dY(t) = mu dt + sigma dW(t)\n",
                                       "    Z(i) ~ N(Y(i), sigma_obs^2)"),
-                    "BM-t" = "    Brownian motion with t-distributed noise",
+                    "BM_t" = "    Brownian motion with t-distributed noise",
                     "OU" = paste0("    dZ(t) = beta (mu - Z(t)) dt + sigma dW(t)\n",
                                   "Parameterised in terms of:\n",
                                   "* tau = 1/beta\n",
@@ -562,8 +562,8 @@ SDE <- R6Class(
                             include_penalty = 1)
             
             # Model-specific data objects
-            if(self$type() == "BM-t") {
-                # Pass degrees of freedom for BM-t model
+            if(self$type() == "BM_t") {
+                # Pass degrees of freedom for BM_t model
                 tmb_dat$other_data <- self$other_data()$df
             } else if(self$type() == "BM_SSM" | self$type() == "OU_SSM") {
                 # Number of dimensions
@@ -658,7 +658,7 @@ SDE <- R6Class(
             }
             
             # Decaying response model
-            if(self$type() %in% c("BM", "BM-t", "OU", "CIR")) {
+            if(self$type() %in% c("BM", "BM_t", "OU", "CIR")) {
                 if(!is.null(self$other_data()$t_decay)) {
                     if(any(self$other_data()$col_decay > length(self$terms()$names_re_all))) {
                         stop(paste0("'col_decay' should be between 1 and ", 
@@ -1230,7 +1230,7 @@ SDE <- R6Class(
             if(self$type() == "BM") {
                 mean <- Z[-end_ind,] + par[-end_ind, "mu"] * dtimes
                 sd <- par[-end_ind, "sigma"] * sqrt(dtimes)
-            } else if (self$type() == "BM-t") {
+            } else if (self$type() == "BM_t") {
                 df <- self$other_data()$df # degrees of freedom
                 mean <- Z[-end_ind,] + par[-end_ind, "mu"] * dtimes
                 sd <- par[-end_ind, "sigma"] * sqrt(dtimes)
@@ -1401,7 +1401,7 @@ SDE <- R6Class(
         #' @param z0 Optional value for first observation of simulated time series.
         #' Default: 0.
         #' @param posterior Logical. If TRUE, the parameters used for the simulation
-        #' are drawn from their posterior distribution using \text{SDE$post_coeff}, 
+        #' are drawn from their posterior distribution using \code{SDE$post_coeff}, 
         #' therefore accounting for uncertainty.
         #' 
         #' @return Input data frame with extra column for simulated time series
