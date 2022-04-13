@@ -1437,7 +1437,7 @@ SDE <- R6Class(
                 # Use point estimates of coeff_fe/re
                 par <- self$par(new_data = data)
             }
-
+            
             # Loop over dimensions
             n_dim <- length(self$response())
             if(length(z0) < n_dim) {
@@ -1501,6 +1501,22 @@ SDE <- R6Class(
                         
                         # Only return location (and not velocity)
                         sub_obs <- sub_dat[,"z"]
+                    } else if(self$type() == "CIR") {
+                        # Unpack parameters
+                        mu <- sub_par[, d]
+                        beta <- sub_par[, n_dim + 1]
+                        sigma <- sub_par[, n_dim + 2]
+                        
+                        # Loop over time steps
+                        sub_obs <- rep(z0[d], sub_n)
+                        for(i in 2:n) {
+                            c <- 2 * beta[i-1] / 
+                                ((1 - exp(-beta[i-1] * dtimes[i-1])) * sigma[i-1]^2)
+                            df <- 4 * beta[i-1] * mu[i-1] / sigma[i-1]^2
+                            ncp <- 2 * c * sub_obs[i-1] * exp(- beta * dtimes[i-1])
+                            Y <- rchisq(n = 1, df = df, ncp = ncp)
+                            sub_obs[i] <- Y/(2 * c)
+                        }
                     } else {
                         stop(paste("Simulation not implemented yet for", self$type(), "model."))
                     }
