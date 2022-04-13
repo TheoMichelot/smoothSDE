@@ -13,6 +13,15 @@ Contains the model formulas and data.
 
 This creates an attribute \code{tmb_obj}, which can be used to 
 evaluate the negative log-likelihood function.
+
+
+This applies \code{check_fn} to the observed data (returned by 
+\code{data()} method) to obtain observed statistics. It then repeatedly
+simulates a realisation from the fitted SDE (based on observed covariates),
+and applies \code{check_fn} to the simulated data. The simulations use
+the \code{posterior = TRUE} option from the code{simulate} method, i.e., 
+parameters of model used for simulation are generated from posterior
+distribution.
 }
 \section{Methods}{
 \subsection{Public methods}{

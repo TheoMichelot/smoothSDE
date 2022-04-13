@@ -1261,6 +1261,14 @@ SDE <- R6Class(
         #' @param silent Logical. If FALSE, simulation progress is shown. 
         #' (Default: FALSE)
         #' 
+        #' @details This applies \code{check_fn} to the observed data (returned by 
+        #' \code{data()} method) to obtain observed statistics. It then repeatedly
+        #' simulates a realisation from the fitted SDE (based on observed covariates),
+        #' and applies \code{check_fn} to the simulated data. The simulations use
+        #' the \code{posterior = TRUE} option from the code{simulate} method, i.e., 
+        #' parameters of model used for simulation are generated from posterior
+        #' distribution.
+        #'
         #' @return List with elements:
         #' \itemize{
         #'   \item{obs_stat}{Vector of values of goodness-of-fit statistics for the
@@ -1285,7 +1293,7 @@ SDE <- R6Class(
                 }
                 
                 # Simulate new data
-                new_data <- self$simulate(data = self$data()) 
+                new_data <- self$simulate(data = self$data(), posterior = TRUE) 
                 # Compute statistics
                 stats[,sim] <- check_fn(new_data)
             }
