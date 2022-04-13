@@ -68,5 +68,5 @@ test_that("SDE members are correct size", {
     expect_equal(length(sde$coeff_fe()), 3)
     expect_equal(length(sde$coeff_re()), 18)
     expect_equal(length(sde$lambda()), 3)
-    expect_equal(length(sde$vcomp()), 3)
+    expect_equal(length(sde$sdev()), 3)
 })

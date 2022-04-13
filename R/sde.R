@@ -220,13 +220,13 @@ SDE <- R6Class(
         #' @description Smoothness parameters
         lambda = function() {return(private$lambda_)},
         
-        #' @description Variance components of smooth terms
+        #' @description Standard deviations of smooth terms
         #' 
         #' This function transforms the smoothness parameter of
         #' each smooth term into a standard deviation, given by 
         #' SD = 1/sqrt(lambda). It is particularly helpful to get the
         #' standard deviations of independent normal random effects.
-        vcomp = function() {return(1/sqrt(private$lambda_))},
+        sdev = function() {return(1/sqrt(private$lambda_))},
         
         #' @description Decay parameter
         rho = function() {

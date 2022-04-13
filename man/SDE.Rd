@@ -30,7 +30,7 @@ evaluate the negative log-likelihood function.
 \item \href{#method-coeff_fe}{\code{SDE$coeff_fe()}}
 \item \href{#method-coeff_re}{\code{SDE$coeff_re()}}
 \item \href{#method-lambda}{\code{SDE$lambda()}}
-\item \href{#method-vcomp}{\code{SDE$vcomp()}}
+\item \href{#method-sdev}{\code{SDE$sdev()}}
 \item \href{#method-rho}{\code{SDE$rho()}}
 \item \href{#method-terms}{\code{SDE$terms()}}
 \item \href{#method-out}{\code{SDE$out()}}
@@ -240,17 +240,17 @@ Smoothness parameters
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-vcomp"></a>}}
-\if{latex}{\out{\hypertarget{method-vcomp}{}}}
-\subsection{Method \code{vcomp()}}{
-Variance components of smooth terms
+\if{html}{\out{<a id="method-sdev"></a>}}
+\if{latex}{\out{\hypertarget{method-sdev}{}}}
+\subsection{Method \code{sdev()}}{
+Standard deviations of smooth terms
 
 This function transforms the smoothness parameter of
 each smooth term into a standard deviation, given by 
 SD = 1/sqrt(lambda). It is particularly helpful to get the
 standard deviations of independent normal random effects.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{SDE$vcomp()}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{SDE$sdev()}\if{html}{\out{</div>}}
 }
 
 }
