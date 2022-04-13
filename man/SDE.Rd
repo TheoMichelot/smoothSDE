@@ -10,6 +10,9 @@ R6 class for stochastic differential equation
 }
 \details{
 Contains the model formulas and data.
+
+This creates an attribute \code{tmb_obj}, which can be used to 
+evaluate the negative log-likelihood function.
 }
 \section{Methods}{
 \subsection{Public methods}{
@@ -60,6 +63,7 @@ Contains the model formulas and data.
 \item \href{#method-plot_par}{\code{SDE$plot_par()}}
 \item \href{#method-ind_fixcoeff}{\code{SDE$ind_fixcoeff()}}
 \item \href{#method-message}{\code{SDE$message()}}
+\item \href{#method-print_par}{\code{SDE$print_par()}}
 \item \href{#method-print}{\code{SDE$print()}}
 \item \href{#method-clone}{\code{SDE$clone()}}
 }
@@ -71,7 +75,7 @@ Contains the model formulas and data.
 Create a SDE object
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{SDE$new(
-  formulas,
+  formulas = NULL,
   data,
   type,
   response,
@@ -84,21 +88,30 @@ Create a SDE object
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{formulas}}{List of formulas for model parameters}
+\item{\code{formulas}}{List of formulas for model parameters, with one element
+for each SDE parameter. Formulas can use standard R syntax, as well
+as mgcv-style syntax for splines and random effects.}
 
 \item{\code{data}}{Data frame with covariates, response variable,
 time, and ID}
 
-\item{\code{type}}{Type of SDE ("BM", "OU"...)}
+\item{\code{type}}{Type of SDE. Options are "BM" (Brownian motion), "OU" (Ornstein-
+Uhlenbeck process), "CTCRW" (continuous-time correlated random walk, a.k.a.
+integrated Ornstein-Uhlenbeck process), "CIR" (Cox-Ingersoll-Ross process),
+"BM_SSM" (BM with measurement error), "OU_SSM" (OU with measurement error),
+"BM-t" (BM with Student's t-distributed increments)}
 
-\item{\code{response}}{Vector of names of response variables}
+\item{\code{response}}{Name of response variable, correspond to a column name in
+\code{data}. Can be a vector of names if multiple response variables}
 
-\item{\code{par0}}{Vector of initial values for SDE parameters}
+\item{\code{par0}}{Vector of initial values for SDE parameters, with one value
+for each SDE parameter. If not provided, parameters are initialised to
+zero on the link scale.}
 
 \item{\code{fixpar}}{Vector of names of fixed SDE parameters}
 
-\item{\code{other_data}}{Named list of data objects to pass to
-likelihood}
+\item{\code{other_data}}{Named list of data objects to pass to likelihood, only
+required for special models}
 }
 \if{html}{\out{</div>}}
 }
@@ -481,9 +494,6 @@ plus a data frame of covariates values.
 \if{latex}{\out{\hypertarget{method-setup}{}}}
 \subsection{Method \code{setup()}}{
 TMB setup
- 
-This creates an attribute \code{tmb_obj}, which can be used to 
-evaluate the negative log-likelihood function.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{SDE$setup(silent = TRUE, map = NULL)}\if{html}{\out{</div>}}
 }
@@ -584,7 +594,7 @@ with one row for each time step and one column for each SDE parameter
 Get SDE parameters
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{SDE$par(
-  t = 1,
+  t = NULL,
   new_data = NULL,
   X_fe = NULL,
   X_re = NULL,
@@ -696,6 +706,7 @@ each SDE parameter, and one layer for each posterior draw
 Pointwise confidence intervals for SDE parameters
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{SDE$CI_pointwise(
+  t = NULL,
   new_data = NULL,
   X_fe = NULL,
   X_re = NULL,
@@ -709,6 +720,10 @@ Pointwise confidence intervals for SDE parameters
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
+\item{\code{t}}{Time points for which the parameters should be returned.
+If "all", returns parameters for all time steps. Defaults to 1 if new
+data not provided, or "all" if new data provided.}
+
 \item{\code{new_data}}{Optional data frame containing covariate values 
 for which the CIs should be computed}
 
@@ -761,6 +776,7 @@ List with elements:
 Simultaneous confidence intervals for SDE parameters
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{SDE$CI_simultaneous(
+  t = NULL,
   new_data = NULL,
   X_fe = NULL,
   X_re = NULL,
@@ -774,6 +790,10 @@ Simultaneous confidence intervals for SDE parameters
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
+\item{\code{t}}{Time points for which the parameters should be returned.
+If "all", returns parameters for all time steps. Defaults to 1 if new
+data not provided, or "all" if new data provided.}
+
 \item{\code{new_data}}{Optional data frame containing covariate values 
 for which the CIs should be computed}
 
@@ -830,19 +850,16 @@ Model residuals
 \subsection{Method \code{gof()}}{
 Compute goodness-of-fit statistics using simulation
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{SDE$gof(gof_fn, nsims = 100, full = FALSE, silent = FALSE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{SDE$gof(gof_fn, n_sims = 100, silent = FALSE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{gof_fn}}{Goodness-of-fit function which accepts "data" as input
-and returns a statistic: either a vector or a single number.}
+and returns a statistic (either a vector or a single number).}
 
-\item{\code{nsims}}{Number of simulations to perform}
-
-\item{\code{full}}{If model fit with MCMC then full set to TRUE will sample from
-posterior for each simulation}
+\item{\code{n_sims}}{Number of simulations to perform}
 
 \item{\code{silent}}{Logical. If FALSE, simulation progress is shown. 
 (Default: TRUE)}
@@ -922,7 +939,7 @@ terms implied by smoothing)
 \subsection{Method \code{simulate()}}{
 Simulate from SDE model
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{SDE$simulate(data, z0 = 0)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{SDE$simulate(data, z0 = 0, posterior = FALSE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -933,6 +950,10 @@ times of observations, and columns for covariates if necessary.}
 
 \item{\code{z0}}{Optional value for first observation of simulated time series.
 Default: 0.}
+
+\item{\code{posterior}}{Logical. If TRUE, the parameters used for the simulation
+are drawn from their posterior distribution using \text{SDE$post_coeff}, 
+therefore accounting for uncertainty.}
 }
 \if{html}{\out{</div>}}
 }
@@ -1012,6 +1033,16 @@ Indices of fixed coefficients in coeff_fe
 Print SDE and parameter formulas
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{SDE$message()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-print_par"></a>}}
+\if{latex}{\out{\hypertarget{method-print_par}{}}}
+\subsection{Method \code{print_par()}}{
+Print parameter values for t = 1
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{SDE$print_par()}\if{html}{\out{</div>}}
 }
 
 }

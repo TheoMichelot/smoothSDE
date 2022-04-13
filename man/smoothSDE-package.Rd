@@ -6,8 +6,7 @@
 \alias{smoothSDE-package}
 \title{smoothSDE: Varying-coefficient stochastic differential equations}
 \description{
-Provides functions to fit stochastic differential
-    equations with time-varying parameters.
+Provides functions to fit stochastic differential equations with time-varying parameters.
 }
 \details{
 The package smoothSDE is based on the class \link{SDE}. Type ?SDE 

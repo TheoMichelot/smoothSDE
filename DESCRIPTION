@@ -11,4 +11,4 @@ Encoding: UTF-8
 Imports: R6, mgcv, TMB, RcppEigen, Matrix, ggplot2, MASS
 LinkingTo: TMB, RcppEigen
 Suggests: testthat
-RoxygenNote: 7.1.1
+RoxygenNote: 7.1.2

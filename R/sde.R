@@ -988,6 +988,9 @@ SDE <- R6Class(
         
         #' @description Pointwise confidence intervals for SDE parameters
         #'
+        #' @param t Time points for which the parameters should be returned.
+        #' If "all", returns parameters for all time steps. Defaults to 1 if new
+        #' data not provided, or "all" if new data provided.
         #' @param new_data Optional data frame containing covariate values 
         #' for which the CIs should be computed
         #' @param X_fe Optional design matrix for fixed effects, as returned
@@ -1065,7 +1068,10 @@ SDE <- R6Class(
         },
         
         #' @description Simultaneous confidence intervals for SDE parameters
-        #'
+        #' 
+        #' @param t Time points for which the parameters should be returned.
+        #' If "all", returns parameters for all time steps. Defaults to 1 if new
+        #' data not provided, or "all" if new data provided.
         #' @param new_data Optional data frame containing covariate values 
         #' for which the CIs should be computed
         #' @param X_fe Optional design matrix for fixed effects, as returned
@@ -1689,7 +1695,7 @@ SDE <- R6Class(
             message()
         },
         
-        #' Print parameter values for t = 1
+        #' @description Print parameter values for t = 1
         print_par = function() {
             if(is.null(private$out_)) {
                 message("> Initial SDE parameters (t = 1):")
