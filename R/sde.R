@@ -1252,13 +1252,14 @@ SDE <- R6Class(
             return(res)
         },
         
-        #' @description Compute goodness-of-fit statistics using simulation
+        #' @description Posterior predictive checks
         #' 
-        #' @param gof_fn Goodness-of-fit function which accepts "data" as input
-        #' and returns a statistic (either a vector or a single number). 
+        #' @param check_fn Goodness-of-fit function which accepts "data" as input
+        #' and returns a statistic or a vector of statistics, to be compared
+        #' between observed data and simulations. 
         #' @param n_sims Number of simulations to perform 
         #' @param silent Logical. If FALSE, simulation progress is shown. 
-        #' (Default: TRUE)
+        #' (Default: FALSE)
         #' 
         #' @return List with elements:
         #' \itemize{
@@ -1267,11 +1268,14 @@ SDE <- R6Class(
         #'   \item{stats}{Matrix of values of goodness-of-fit statistics for the
         #'   simulated data sets (one row for each statistic, and one column for each
         #'   simulation)}
-        #'   \item{plot}{ggplot object}
+        #'   \item{plot}{ggplot object showing, for each statistic returned by 
+        #'   check_fn, a histogram of simulated values and a vertical line for the
+        #'   observed value. An observed value in the tails of the simulated
+        #'   distribution suggests lack of fit.}
         #' }
-        gof = function(gof_fn, n_sims = 100, silent = FALSE) {
+        check_post = function(check_fn, n_sims = 100, silent = FALSE) {
             # Evaluate statistics for observed data
-            obs_stat <- gof_fn(self$data())
+            obs_stat <- check_fn(self$data())
             
             # Simulate from model and evaluate statistics for simulated data
             stats <- matrix(0, nrow = length(obs_stat), ncol = n_sims)
@@ -1283,7 +1287,7 @@ SDE <- R6Class(
                 # Simulate new data
                 new_data <- self$simulate(data = self$data()) 
                 # Compute statistics
-                stats[,sim] <- gof_fn(new_data)
+                stats[,sim] <- check_fn(new_data)
             }
             
             # Get names of statistics

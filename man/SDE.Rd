@@ -55,7 +55,7 @@ evaluate the negative log-likelihood function.
 \item \href{#method-CI_pointwise}{\code{SDE$CI_pointwise()}}
 \item \href{#method-CI_simultaneous}{\code{SDE$CI_simultaneous()}}
 \item \href{#method-residuals}{\code{SDE$residuals()}}
-\item \href{#method-gof}{\code{SDE$gof()}}
+\item \href{#method-check_post}{\code{SDE$check_post()}}
 \item \href{#method-AIC_conditional}{\code{SDE$AIC_conditional()}}
 \item \href{#method-AIC_marginal}{\code{SDE$AIC_marginal()}}
 \item \href{#method-edf_conditional}{\code{SDE$edf_conditional()}}
@@ -845,24 +845,25 @@ Model residuals
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-gof"></a>}}
-\if{latex}{\out{\hypertarget{method-gof}{}}}
-\subsection{Method \code{gof()}}{
-Compute goodness-of-fit statistics using simulation
+\if{html}{\out{<a id="method-check_post"></a>}}
+\if{latex}{\out{\hypertarget{method-check_post}{}}}
+\subsection{Method \code{check_post()}}{
+Posterior predictive checks
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{SDE$gof(gof_fn, n_sims = 100, silent = FALSE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{SDE$check_post(check_fn, n_sims = 100, silent = FALSE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{gof_fn}}{Goodness-of-fit function which accepts "data" as input
-and returns a statistic (either a vector or a single number).}
+\item{\code{check_fn}}{Goodness-of-fit function which accepts "data" as input
+and returns a statistic or a vector of statistics, to be compared
+between observed data and simulations.}
 
 \item{\code{n_sims}}{Number of simulations to perform}
 
 \item{\code{silent}}{Logical. If FALSE, simulation progress is shown. 
-(Default: TRUE)}
+(Default: FALSE)}
 }
 \if{html}{\out{</div>}}
 }
@@ -874,7 +875,10 @@ List with elements:
   \item{stats}{Matrix of values of goodness-of-fit statistics for the
   simulated data sets (one row for each statistic, and one column for each
   simulation)}
-  \item{plot}{ggplot object}
+  \item{plot}{ggplot object showing, for each statistic returned by 
+  check_fn, a histogram of simulated values and a vertical line for the
+  observed value. An observed value in the tails of the simulated
+  distribution suggests lack of fit.}
 }
 Conditional Akaike Information Criterion
 
