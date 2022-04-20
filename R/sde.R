@@ -292,32 +292,6 @@ SDE <- R6Class(
             self$data()[, self$response(), drop = FALSE]
         },
         
-        #' @description Print equation for this model
-        eqn = function() {
-            switch (self$type(),
-                    "BM" = "    dZ(t) = mu dt + sigma dW(t)",
-                    "BM_SSM" = paste0("    dY(t) = mu dt + sigma dW(t)\n",
-                                      "    Z(i) ~ N(Y(i), sigma_obs^2)"),
-                    "BM_t" = "    Brownian motion with t-distributed noise",
-                    "OU" = paste0("    dZ(t) = beta (mu - Z(t)) dt + sigma dW(t)\n",
-                                  "Parameterised in terms of:\n",
-                                  "* tau = 1/beta\n",
-                                  "* kappa = sigma^2/(2*beta)"),
-                    "OU_SSM" = paste0("    dZ(t) = beta (mu - Z(t)) dt + sigma dW(t)\n",
-                                      "    Z(i) ~ N(Y(i), sigma_obs^2)\n",
-                                      "Parameterised in terms of:\n",
-                                      "* tau = 1/beta\n",
-                                      "* kappa = sigma^2/(2*beta)"),
-                    "CTCRW" = paste0("    dV(t) = beta (mu - V(t)) dt + sigma dW(t)\n", 
-                                     "    dZ(t) = V(t) dt\n",
-                                     "Parameterised in terms of:\n",
-                                     "* tau = 1/beta\n",
-                                     "* nu = sqrt(pi/beta)*sigma/2"),
-                    "ESEAL_SSM" = paste0("    dL(t) = mu dt + sigma dW(t)\n", 
-                                         "    Z(i) ~ N(a1 + a2 L(i)/R(i), tau^2/h(i))"))
-            
-        },
-        
         #' @description Get design matrix for random effects in decay model
         #' 
         #' The design matrix is obtained by taking X_re (returned by 
@@ -1695,6 +1669,33 @@ SDE <- R6Class(
             }
             
             return(ind_fixcoeff)
+        },
+        
+        #' @description Print equation for this model
+        eqn = function() {
+            switch (self$type(),
+                    "BM" = "    dZ(t) = mu dt + sigma dW(t)",
+                    "BM_SSM" = paste0("    dY(t) = mu dt + sigma dW(t)\n",
+                                      "    Z(i) ~ N(Y(i), sigma_obs^2)"),
+                    "BM_t" = "    Brownian motion with t-distributed noise",
+                    "OU" = paste0("    dZ(t) = beta (mu - Z(t)) dt + sigma dW(t)\n",
+                                  "Parameterised in terms of:\n",
+                                  "* tau = 1/beta\n",
+                                  "* kappa = sigma^2/(2*beta)"),
+                    "OU_SSM" = paste0("    dZ(t) = beta (mu - Z(t)) dt + sigma dW(t)\n",
+                                      "    Z(i) ~ N(Y(i), sigma_obs^2)\n",
+                                      "Parameterised in terms of:\n",
+                                      "* tau = 1/beta\n",
+                                      "* kappa = sigma^2/(2*beta)"),
+                    "CIR" = "    dZ(t) = beta (mu - Z(t)) dt + sigma sqrt(Z(t)) dW(t)",
+                    "CTCRW" = paste0("    dV(t) = beta (mu - V(t)) dt + sigma dW(t)\n", 
+                                     "    dZ(t) = V(t) dt\n",
+                                     "Parameterised in terms of:\n",
+                                     "* tau = 1/beta\n",
+                                     "* nu = sqrt(pi/beta)*sigma/2"),
+                    "ESEAL_SSM" = paste0("    dL(t) = mu dt + sigma dW(t)\n", 
+                                         "    Z(i) ~ N(a1 + a2 L(i)/R(i), tau^2/h(i))"))
+            
         },
         
         #' @description Print SDE and parameter formulas
