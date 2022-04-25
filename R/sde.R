@@ -1747,6 +1747,50 @@ SDE <- R6Class(
         print = function() {
             self$message()
             self$print_par()
+        },
+        
+        #' @description Print stationary distribution
+        stationary = function() {
+            if(is.null(private$out_)) {
+                msg <- "Based on initial SDE parameters (t = 1), "
+            } else {
+                msg <- "Based on estimated SDE parameters (t = 1), "
+                CI <- round(self$CI_pointwise(t = 1), 3)
+            }
+            par <- round(self$par(t = 1), 3)
+            msg <- paste0(msg, "the stationary distribution of this ", 
+                          self$type(), " process is ")
+            
+            if(self$type() == "OU" | self$type() == "OU_SSM") {
+                # OU: Z_t ~ N(mu, kappa)
+                msg <- paste0(msg, "normal with parameters:\n",
+                              "\t* mean = ", par[,"mu"], " \t(", 
+                              CI["mu", 1,], ", ", CI["mu", 2,], ")\n",
+                              "\t* variance = ", par[,"kappa"], " \t(", 
+                              CI["kappa", 1,], ", ", CI["kappa", 2,], ")")
+            } else if(self$type() == "CIR") {
+                # Shape and rate of stationary distribution
+                mean <- par[,"mu"]
+                var <- par[,"mu"] * par[,"sigma"]^2 / (2 * par[,"beta"])
+                
+                # Generate posterior draws from SDE parameters to get CIs
+                mats <- self$make_mat(new_data = self$data()[1,])
+                post <- self$post_par(X_fe = mats$X_fe, X_re = mats$X_re, n_post = 1e3)
+                post_mean <- post[,"mu",]
+                post_var <- post[,"mu",] * post[,"sigma",]^2 / (2 * post[,"beta",])
+                CI_mean <- round(quantile(post_mean, c(0.025, 0.975)), 3)
+                CI_var <- round(quantile(post_var, c(0.025, 0.975)), 3)
+                
+                msg <- paste0(msg, "gamma with parameters:\n",
+                              "\t* mean = ", round(mean, 3), " \t(",
+                              CI_mean[1], ", ", CI_mean[2], ")\n",
+                              "\t* variance = ", round(var, 3), " \t(",
+                              CI_var[1], ", ", CI_var[2], ")")
+            }
+            
+            msg <- paste0(msg, "\n(Note: this is *not* the stationary distribution ",
+                          "if the parameters are time-varying)")
+            message(msg)
         }
     ),
     
