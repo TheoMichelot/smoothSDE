@@ -194,3 +194,20 @@ CTCRW_cov <- function(beta, sigma, dt) {
     Q[2,1] <- Q[1,2]
     return(Q)   
 }
+
+#' Transforms matrix to dgTMatrix
+#' 
+#' @param x Matrix or vector. If this is a vector, it is formatted into
+#' a single-column matrix.
+#' 
+#' @return Sparse matrix of class dgTMatrix
+as_sparse <- function(x) {
+    if(length(dim(x)) < 2) {
+        x <- matrix(x, ncol = 1)
+    }
+    # # This is the syntax recommended by Matrix > 1.5.0, but doesn't seem
+    # # to be compatible with earlier versions of Matrix.
+    # mat <- as(as(as(x, "dMatrix"), "generalMatrix"), "TsparseMatrix")
+    mat <- suppressMessages(as(x, "dgTMatrix"))
+    return(mat)
+}

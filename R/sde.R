@@ -513,9 +513,9 @@ SDE <- R6Class(
                 # coeff_re and log_lambda are not estimated
                 map <- c(map, list(coeff_re = factor(NA),
                                    log_lambda = factor(NA)))
-                S <- as(matrix(0, 1, 1), "sparseMatrix")
+                S <- as_sparse(matrix(0, 1, 1))
                 ncol_re <- 0
-                X_re <- as(rep(0, nrow(X_fe)), "sparseMatrix")
+                X_re <- as_sparse(rep(0, nrow(X_fe)))
             } else {
                 # If there are random effects, 
                 # set initial values for coeff_re and log_lambda
@@ -529,9 +529,9 @@ SDE <- R6Class(
                             ID = self$data()$ID,
                             times = self$data()$time,
                             obs = as.matrix(self$obs()),
-                            X_fe = X_fe,
-                            X_re = X_re,
-                            S = S,
+                            X_fe = as_sparse(X_fe),
+                            X_re = as_sparse(X_re),
+                            S = as_sparse(S),
                             ncol_re = ncol_re,
                             include_penalty = 1)
             
