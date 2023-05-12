@@ -84,8 +84,8 @@ matrix<Type> makeB_ctcrw(Type beta, Type dt, int n_dim) {
     matrix<Type> B(2*n_dim, n_dim);
     B.setZero();
     for(int i = 0; i < n_dim; i++) {
-        B(2*i, i) = 1 - exp(-beta*dt);
-        B(2*i + 1, i) = dt - (1 - exp(-beta*dt))/beta;
+        B(2*i, i) = dt - (1 - exp(-beta*dt))/beta;
+        B(2*i + 1, i) = 1 - exp(-beta*dt);
     }
     return B;
 }
