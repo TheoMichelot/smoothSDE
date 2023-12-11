@@ -693,7 +693,8 @@ SDE <- R6Class(
                 # Fit model
                 private$out_ <- optim(par = private$tmb_obj_$par,
                                       fn = private$tmb_obj_$fn, 
-                                      gr = private$tmb_obj_$gr)
+                                      gr = private$tmb_obj_$gr, 
+                                      method = "BFGS")
                 # private$out_ <- do.call(optim, private$tmb_obj_)
             })
             private$out_$systime <- sys_time
