@@ -53,6 +53,12 @@ SDE <- R6Class(
             
             # Link functions for SDE parameters
             n_dim <- length(response)
+            if(type == "UDL") {
+                n_cov <- length(other_data$cov_grad)
+                if(n_cov == 0) {
+                    stop("'UDL' model requires other_data$cov_grad")
+                }
+            }
             link <- switch (type,
                             "BM" = as.list(c(mu = lapply(1:n_dim, function(i) identity), 
                                              sigma = log)),
@@ -67,6 +73,8 @@ SDE <- R6Class(
                                               beta = log, sigma = log)),
                             "CTCRW" = as.list(c(mu = lapply(1:n_dim, function(i) identity), 
                                                 tau = log, nu = log)),
+                            "UDL" = as.list(c(gamma = log, sigma = log,
+                                              beta = lapply(1:n_cov, function(i) identity))),
                             "ESEAL_SSM" = list(mu = identity, sigma = log))
             
             # Inverse link functions for SDE parameters
@@ -84,6 +92,8 @@ SDE <- R6Class(
                                                  beta = exp, sigma = exp)),
                                "CTCRW" = as.list(c(mu = lapply(1:n_dim, function(i) identity), 
                                                    tau = exp, nu = exp)),
+                               "UDL" = as.list(c(gamma = exp, sigma = exp,
+                                                 beta = lapply(1:n_cov, function(i) identity))),
                                "ESEAL_SSM" = list(mu = identity, sigma = exp))
             
             private$link_ <- link
@@ -566,7 +576,7 @@ SDE <- R6Class(
                 } else {
                     tmb_dat$H_array <- array(0)
                 }
-            } else if(self$type() == "CTCRW") {
+            } else if(self$type() %in% c("CTCRW", "UDL")) {
                 # Number of dimensions
                 n_dim <- ncol(self$obs())
                 # Define initial state and covariance for Kalman filter
@@ -595,6 +605,10 @@ SDE <- R6Class(
                     map <- c(map, list(log_sigma_obs = factor(NA)))
                 } else {
                     tmb_dat$H_array <- array(0)
+                }
+                
+                if(self$type() == "UDL") {
+                    tmb_dat$cov_grad = self$other_data()$cov_grad
                 }
             } else if(self$type() == "ESEAL_SSM") {
                 # Define initial state and covariance for Kalman filter
@@ -1694,6 +1708,7 @@ SDE <- R6Class(
                                      "Parameterised in terms of:\n",
                                      "* tau = 1/beta\n",
                                      "* nu = sqrt(pi/beta)*sigma/2"),
+                    "UDL" = paste0("    Underdamped Langevin process"),
                     "ESEAL_SSM" = paste0("    dL(t) = mu dt + sigma dW(t)\n", 
                                          "    Z(i) ~ N(a1 + a2 L(i)/R(i), tau^2/h(i))"))
             
