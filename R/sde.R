@@ -54,10 +54,7 @@ SDE <- R6Class(
             # Link functions for SDE parameters
             n_dim <- length(response)
             if(type == "UDL") {
-                n_cov <- length(other_data$cov_grad)
-                if(n_cov == 0) {
-                    stop("'UDL' model requires other_data$cov_grad")
-                }
+                n_cov <- dim(other_data$cov_grad)[3]
             }
             link <- switch (type,
                             "BM" = as.list(c(mu = lapply(1:n_dim, function(i) identity), 

@@ -51,8 +51,8 @@ using namespace Eigen;
  matrix<Type> makeQ_udl(Type gamma, Type sigma, Type dt, int n_dim) {
      matrix<Type> Q(2*n_dim, 2*n_dim);
      Q.setZero();
-     double sig2 = sigma * sigma;
-     double gamma2 = gamma * gamma;
+     Type sig2 = sigma * sigma;
+     Type gamma2 = gamma * gamma;
      for(int i = 0; i < n_dim; i++) {
          Q(2*i, 2*i) = sig2 * (2 * dt / gamma - exp(-2 * gamma * dt)/gamma2 -
              3 / gamma2 + 4 * exp(- gamma * dt) / gamma2);
@@ -79,10 +79,21 @@ using namespace Eigen;
      DATA_IVECTOR(ncol_re); // Number of columns of S and X_re for each random effect
      DATA_MATRIX(a0); // Initial state estimate for Kalman filter
      DATA_MATRIX(P0); // Initial state covariance for Kalman filter
-     DATA_MATRIX(P0); // Initial state covariance for Kalman filter
      DATA_ARRAY(cov_grad);
      
      DATA_ARRAY(H_array); // Covariance matrices for observation error
+     
+     // Number of observations
+     int n = obs.rows();
+     
+     // Number of dimensions
+     int n_dim = obs.cols();
+     
+     // Time intervals (needs to be of length n)
+     vector<Type> dtimes(n);
+     for(int i = 0; i < n-1; i++)
+         dtimes(i) = times(i+1) - times(i);
+     dtimes(n-1) = 1;
      
      //============//
      // PARAMETERS //
@@ -113,10 +124,12 @@ using namespace Eigen;
      // Gradient of stationary distribution
      matrix<Type> h(n, n_dim);
      h.setZero();
-     for(int i = 0; i < n_cov; i++) {
-         // .col() accesses slices (the "outer-most dimension")
-         // See https://kaskr.github.io/adcomp/structarray.html
-         h = h + beta(i) * cov_grad.col(i).matrix(); 
+     for(int i = 0; i < n; i++) {
+         for(int j = 0; j < n_dim; j++) {
+             for(int k = 0; k < n_cov; k++) {
+                 h(i, j) = h(i, j) + beta(i, k) * cov_grad(i, j, k);                 
+             }
+         }
      }
      
      //================================//
@@ -168,13 +181,16 @@ using namespace Eigen;
              // if(H_array.size() > 1) {
              //     H = H_array.col(i).matrix();
              // }
-             matrix<Type> T = makeT_udl(gamma(i), dtimes(i), n_dim);
-             matrix<Type> Q = makeQ_udl(gamma(i), sigma(i), dtimes(i), n_dim);
-             matrix<Type> B = makeB_udl(gamma(i), sigma(i), dtimes(i), n_dim);
+             T = makeT_udl(gamma(i), dtimes(i), n_dim);
+             Q = makeQ_udl(gamma(i), sigma(i), dtimes(i), n_dim);
+             B = makeB_udl(gamma(i), sigma(i), dtimes(i), n_dim);
+             
+             vector<Type> h_i = h.row(i).transpose();
+             vector<Type> B_times_h = B * h_i;
              
              if(R_IsNA(asDouble(obs(i,0)))) {
                  // If missing observation
-                 aest = T * aest + B * h.row(i);
+                 aest = T * aest + B_times_h;
                  Pest = T * Pest * T.transpose() + Q;
              } else {
                  // Measurement residual
@@ -185,7 +201,7 @@ using namespace Eigen;
                  detF = det(F);
                  
                  if(detF <= 0) {
-                     aest = T * aest + B * h.row(i);
+                     aest = T * aest + B_times_h;
                      Pest = T * Pest * T.transpose() + Q;
                  } else {
                      // Update log-likelihood
@@ -196,7 +212,7 @@ using namespace Eigen;
                      // Kalman gain
                      K = T * Pest * Z.transpose() * F.inverse();
                      // Update state estimate
-                     aest = T * aest + K * u + B * h.row(i);
+                     aest = T * aest + K * u + B_times_h;
                      // Update estimate covariance
                      L = T - K * Z;
                      Pest = T * Pest * L.transpose() + Q;
