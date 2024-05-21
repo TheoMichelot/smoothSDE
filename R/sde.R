@@ -593,9 +593,6 @@ SDE <- R6Class(
                     tmb_dat$P0 <- self$other_data()$P0
                 }
                 
-                # Initialise model-specific parameter (measurement error SD)
-                tmb_par <- c(log_sigma_obs =  0, tmb_par)
-                
                 # Check whether observation error is provided by user
                 if(!is.null(self$other_data()$H)) {
                     tmb_dat$H_array <- self$other_data()$H
@@ -606,6 +603,9 @@ SDE <- R6Class(
                 
                 if(self$type() == "UDL") {
                     tmb_dat$cov_grad = self$other_data()$cov_grad
+                } else {
+                    # Initialise model-specific parameter (measurement error SD)
+                    tmb_par <- c(log_sigma_obs =  0, tmb_par)
                 }
             } else if(self$type() == "ESEAL_SSM") {
                 # Define initial state and covariance for Kalman filter

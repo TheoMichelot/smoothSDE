@@ -98,9 +98,9 @@ using namespace Eigen;
      //============//
      // PARAMETERS //
      //============//
-     // SD of measurement error
-     PARAMETER(log_sigma_obs);
-     Type sigma_obs = exp(log_sigma_obs);
+     // // SD of measurement error
+     // PARAMETER(log_sigma_obs);
+     // Type sigma_obs = exp(log_sigma_obs);
      
      PARAMETER_VECTOR(coeff_fe); // Fixed effect parameters
      PARAMETER_VECTOR(log_lambda); // Smoothness parameters
