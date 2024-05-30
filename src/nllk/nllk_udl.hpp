@@ -185,7 +185,7 @@ using namespace Eigen;
              Q = makeQ_udl(gamma(i), sigma(i), dtimes(i), n_dim);
              B = makeB_udl(gamma(i), sigma(i), dtimes(i), n_dim);
              
-             vector<Type> h_i = h.row(i).transpose();
+             vector<Type> h_i = h.row(i-1).transpose();
              vector<Type> B_times_h = B * h_i;
              
              if(R_IsNA(asDouble(obs(i,0)))) {
