@@ -91,9 +91,15 @@ using namespace Eigen;
      
      // Time intervals (needs to be of length n)
      vector<Type> dtimes(n);
-     for(int i = 0; i < n-1; i++)
-         dtimes(i) = times(i+1) - times(i);
-     dtimes(n-1) = 1;
+     for(int i = 0; i < n-1; i++) {
+         if(ID(i+1) == ID(i)) {
+             dtimes(i) = times(i+1) - times(i);
+         } else {
+             // Use last time interval twice
+             dtimes(i) = times(i) - times(i-1);
+         }
+     }
+     dtimes(n-1) = dtimes(n-2);
      
      //============//
      // PARAMETERS //
@@ -170,6 +176,8 @@ using namespace Eigen;
      matrix<Type> aest_all(n, 2*n_dim);
      aest_all.setZero();
      aest_all.row(0) = aest;
+     matrix<Type> residuals(n, n_dim);
+     residuals.setZero();
      for(int i = 1; i < n; i++) {
          if(ID(i) != ID(i-1)) {
              // If first location of track, re-initialise state vector
@@ -196,6 +204,7 @@ using namespace Eigen;
                  // Measurement residual
                  vector<Type> obsrow =  obs.row(i).transpose();
                  u = obsrow - Z * aest;
+                 residuals.row(i) = u;
                  // Residual covariance
                  F = Z * Pest * Z.transpose(); //+ H;
                  detF = det(F);
@@ -223,6 +232,8 @@ using namespace Eigen;
          aest_all.row(i) = aest;
      }
      
+     REPORT(residuals)
+     
      //===================//
      // Smoothing penalty //
      // ===================//
@@ -231,24 +242,24 @@ using namespace Eigen;
      if(ncol_re(0) > 0) {
          // Index in matrix S
          int S_start = 0;
-         
+
          // Loop over smooths
          for(int i = 0; i < ncol_re.size(); i++) {
              // Size of penalty matrix for this smooth
              int Sn = ncol_re(i);
-             
+
              // Penalty matrix for this smooth
              Eigen::SparseMatrix<Type> this_S = S.block(S_start, S_start, Sn, Sn);
-             
+
              // Coefficients for this smooth
              vector<Type> this_coeff_re = coeff_re.segment(S_start, Sn);
-             
+
              // Add penalty
              nllk = nllk -
                  Type(0.5) * Sn * log_lambda(i) +
-                 Type(0.5) * exp(log_lambda(i)) * 
+                 Type(0.5) * exp(log_lambda(i)) *
                  density::GMRF(this_S).Quadform(this_coeff_re);
-             
+
              // Increase index
              S_start = S_start + Sn;
          }
