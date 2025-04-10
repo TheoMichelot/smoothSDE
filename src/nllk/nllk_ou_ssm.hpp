@@ -94,9 +94,15 @@ Type nllk_ou_ssm(objective_function<Type>* obj) {
 
     // Time intervals
     vector<Type> dtimes(n);
-    for(int i = 0; i < n-1; i++)
-        dtimes(i) = times(i+1) - times(i);
-    dtimes(n - 1) = 1;
+    for(int i = 0; i < n-1; i++) {
+        if(ID(i+1) == ID(i)) {
+            dtimes(i) = times(i+1) - times(i);
+        } else {
+            // Use last time interval twice
+            dtimes(i) = times(i) - times(i-1);
+        }
+    }
+    dtimes(n-1) = dtimes(n-2);
     
     //============//
     // PARAMETERS //

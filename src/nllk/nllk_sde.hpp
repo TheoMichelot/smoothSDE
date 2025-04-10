@@ -34,7 +34,16 @@ Type nllk_sde(objective_function<Type>* obj) {
     // Number of observations
     int n = obs.rows();
     // Time intervals
-    vector<Type> dtimes = diff(times);
+    vector<Type> dtimes(n);
+    for(int i = 0; i < n-1; i++) {
+        if(ID(i+1) == ID(i)) {
+            dtimes(i) = times(i+1) - times(i);
+        } else {
+            // Use last time interval twice
+            dtimes(i) = times(i) - times(i-1);
+        }
+    }
+    dtimes(n-1) = dtimes(n-2);
     
     //============//
     // PARAMETERS //
