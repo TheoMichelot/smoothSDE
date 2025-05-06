@@ -99,19 +99,15 @@ using namespace Eigen;
          if(ID(i+1) == ID(i)) {
              dtimes(i) = times(i+1) - times(i);
          } else {
-             // Use last time interval twice
-             dtimes(i) = times(i) - times(i-1);
+             // Set last time interval to zero (not used)
+             dtimes(i) = 0;
          }
      }
-     dtimes(n-1) = dtimes(n-2);
+     dtimes(n-1) = 0;
      
      //============//
      // PARAMETERS //
      //============//
-     // // SD of measurement error
-     // PARAMETER(log_sigma_obs);
-     // Type sigma_obs = exp(log_sigma_obs);
-     
      PARAMETER_VECTOR(coeff_fe); // Fixed effect parameters
      PARAMETER_VECTOR(log_lambda); // Smoothness parameters
      PARAMETER_VECTOR(coeff_re); // Random effect parameters
@@ -173,55 +169,61 @@ using namespace Eigen;
      Pest = P0;
      
      // Counter for ID (to initialise a0)
-     int k = 1;
+     int k = 0;
+     
+     // Variable to save state estimate
+     matrix<Type> aest_all(n, 2*n_dim);
+     aest_all.setZero();
+     // Variable to save measurement residuals
+     matrix<Type> residuals(n, n_dim);
+     residuals.setZero();
      
      // Kalman filter iterations
      Type llk = 0;
-     matrix<Type> aest_all(n, 2*n_dim);
-     aest_all.setZero();
-     aest_all.row(0) = aest;
-     matrix<Type> residuals(n, n_dim);
-     residuals.setZero();
-     for(int i = 1; i < n; i++) {
-         if(ID(i) != ID(i-1)) {
+     
+     for(int i = 0; i < n; i++) {
+         if(i == 0 || ID(i) != ID(i-1)) {
              // If first location of track, re-initialise state vector
              aest = a0.row(k);
              k = k + 1;
              Pest = P0;
+         }
+         
+         // Compute Kalman filter matrices
+         T = makeT_udl(gamma(i), dtimes(i), n_dim);
+         Q = makeQ_udl(gamma(i), sigma(i), dtimes(i), n_dim);
+         B = makeB_udl(gamma(i), sigma(i), dtimes(i), n_dim);
+         
+         // Gradient at time i is used to compute state estimate 
+         // for time i+1 below
+         vector<Type> h_i = h.row(i).transpose();
+         vector<Type> B_times_h = B * h_i;
+         
+         if(R_IsNA(asDouble(obs(i,0)))) {
+             // If missing observation
+             aest = T * aest + B_times_h;
+             Pest = T * Pest * T.transpose() + Q;
          } else {
-             // Compute Kalman filter matrices
-             // if(H_array.size() > 1) {
-             //     H = H_array.col(i).matrix();
-             // }
-             T = makeT_udl(gamma(i), dtimes(i), n_dim);
-             Q = makeQ_udl(gamma(i), sigma(i), dtimes(i), n_dim);
-             B = makeB_udl(gamma(i), sigma(i), dtimes(i), n_dim);
+             // Measurement residual
+             vector<Type> obsrow =  obs.row(i).transpose();
+             u = obsrow - Z * aest;
+             residuals.row(i) = u;
+             // Residual covariance
+             F = Z * Pest * Z.transpose();
+             detF = det(F);
              
-             vector<Type> h_i = h.row(i-1).transpose();
-             vector<Type> B_times_h = B * h_i;
-             
-             if(R_IsNA(asDouble(obs(i,0)))) {
-                 // If missing observation
+             if(detF <= 0) {
                  aest = T * aest + B_times_h;
                  Pest = T * Pest * T.transpose() + Q;
              } else {
-                 // Measurement residual
-                 vector<Type> obsrow =  obs.row(i).transpose();
-                 u = obsrow - Z * aest;
-                 residuals.row(i) = u;
-                 // Residual covariance
-                 F = Z * Pest * Z.transpose(); //+ H;
-                 detF = det(F);
+                 // Update log-likelihood
+                 matrix<Type> FinvT = F.inverse().transpose();
+                 vector<Type> FinvTu = FinvT * u;
+                 Type uFu = (u * FinvTu).sum();
+                 llk = llk - (log(detF) + uFu)/2;
                  
-                 if(detF <= 0) {
-                     aest = T * aest + B_times_h;
-                     Pest = T * Pest * T.transpose() + Q;
-                 } else {
-                     // Update log-likelihood
-                     matrix<Type> FinvT = F.inverse().transpose();
-                     vector<Type> FinvTu = FinvT * u;
-                     Type uFu = (u * FinvTu).sum();
-                     llk = llk - (log(detF) + uFu)/2;
+                 // Skip Kalman updates for last obs in track
+                 if(i < n-1 && ID(i+1) == ID(i)) {
                      // Kalman gain
                      K = T * Pest * Z.transpose() * F.inverse();
                      // Update state estimate
@@ -231,7 +233,7 @@ using namespace Eigen;
                      Pest = T * Pest * L.transpose() + Q;
                  }
              }
-         }        
+         }
          
          aest_all.row(i) = aest;
      }
