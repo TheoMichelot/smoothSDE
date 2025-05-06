@@ -83,6 +83,10 @@ using namespace Eigen;
      
      DATA_ARRAY(H_array); // Covariance matrices for observation error
      
+     // Prior information 
+     DATA_MATRIX(coeff_fe_prior); // means, sds for prior on fixed effects
+     DATA_MATRIX(log_lambda_prior); // means, sds for prior on smoothing parameters
+     
      // Number of observations
      int n = obs.rows();
      
@@ -234,6 +238,24 @@ using namespace Eigen;
      
      REPORT(residuals)
      
+     //========//
+     // Priors //
+     //========//
+     // Fixed effects
+     for (int i = 0; i < coeff_fe.size(); i++) {
+         if (!R_IsNA(asDouble(coeff_fe_prior(i, 0)))) {
+             llk = llk + dnorm(coeff_fe(i), coeff_fe_prior(i, 0), coeff_fe_prior(i, 1), 1.0); 
+         }
+     }
+     // Smoothing parameters
+     if (ncol_re(0) > 0) {
+         for (int i = 0; i < log_lambda.size(); i++) {
+             if (!R_IsNA(asDouble(log_lambda_prior(i, 0)))) {
+                 llk = llk + dnorm(log_lambda(i), log_lambda_prior(i, 0), log_lambda_prior(i, 1), 1.0); 
+             }
+         }
+     }
+
      //===================//
      // Smoothing penalty //
      // ===================//

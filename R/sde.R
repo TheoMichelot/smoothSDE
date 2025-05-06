@@ -628,6 +628,22 @@ SDE <- R6Class(
                 tmb_dat$other_data <- 0
             }
             
+            # Priors (currently only for UDL model)
+            if(self$type() == "UDL") {
+                if(is.null(self$other_data()$coeff_fe_prior)) {
+                    tmb_dat$coeff_fe_prior <- 
+                        matrix(NA, nrow = length(tmb_par$coeff_fe), ncol = 2)
+                } else {
+                    tmb_dat$coeff_fe_prior <- self$other_data()$coeff_fe_prior
+                }
+                if(is.null(self$other_data()$log_lambda_prior)) {
+                    tmb_dat$log_lambda_prior <- 
+                        matrix(NA, nrow = length(tmb_par$log_lambda), ncol = 2)
+                } else {
+                    tmb_dat$log_lambda_prior <- self$other_data()$log_lambda_prior
+                }
+            }
+            
             # Setup fixed parameters
             if(!is.null(self$fixpar())) {
                 # Indices of fixed coefficients in coeff_fe
