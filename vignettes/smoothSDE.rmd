@@ -426,17 +426,13 @@ The following code can be used to fit the varying-coefficient CTCRW model to ele
 We first download the data from the Movebank data repository, and keep the relevant rows and columns. Note that the CTCRW model requires projected Easting-Northing locations (rather than longitude-latitude), so that's what we are working with here.
 ```{r ex3-prep}
 # Load data and keep relevant columns
-URL <- paste0("https://www.datarepository.movebank.org/bitstream/handle/",
-              "10255/move.373/Elliptical%20Time-Density%20Model%20%28Wall%",
-              "20et%20al.%202014%29%20African%20Elephant%20Dataset%20%",
-              "28Source-Save%20the%20Elephants%29.csv")
-raw <- read.csv(url(URL))
-keep_cols <- c(11, 13, 14, 17, 4, 5, 6)
-raw_cols <- raw[, keep_cols]
-colnames(raw_cols) <- c("ID", "x", "y", "date", "lon", "lat", "temp")
+file <- paste0("Elliptical Time-Density Model (Wall et al. 2014) ",
+               "African Elephant Dataset (Source-Save the Elephants).csv")
+track <- read.csv(file)[,c(11, 13, 14, 17, 4, 5, 6)] |>
+    setNames(c("ID", "x", "y", "date", "lon", "lat", "temp")) |>
+    subset(ID == unique(ID)[1])
 
 # Only keep five months to eliminate seasonal effects
-track <- subset(raw_cols, ID == unique(ID)[1])
 dates <- as.POSIXlt(track$date, tz = "GMT")
 times <- as.numeric(dates - min(dates))/3600
 keep_rows <- which(dates > as.POSIXct("2009-05-01 00:00:00") & 
@@ -483,11 +479,14 @@ Finally, we use the constructor of the SDE class to create an object for this mo
 ``` {r ex3-create}
 par0 <- c(mu1 = 0, mu2 = 0, tau = 1, nu = 1)
 
+H <- array(0, dim = c(2, 2, nrow(data)))
+
 my_sde <- SDE$new(formulas = formulas, 
                   data = data, 
                   type = "CTCRW", 
                   response = c("x", "y"), 
-                  fixpar = c("mu1", "mu2"))
+                  fixpar = c("mu1", "mu2"), 
+                  other_data = list(H = H))
 ```
 
 Once the model has been created, the parameters can be estimated using the method `fit`:
@@ -514,8 +513,8 @@ par <- my_sde$par(t = "all", new_data = new_data)
 CI <- my_sde$CI_pointwise(new_data = new_data)
 
 # Estimates and 95% CIs for each temperature value given as input
-par
-CI
+par[,c("tau", "nu")]
+CI[c("tau", "nu"),,]
 ```
 
 # References

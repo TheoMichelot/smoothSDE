@@ -45,3 +45,6 @@ src/*.o
 
 .Rbuildignore
 *.Rproj
+
+# For data set(s) used in vignette
+vignettes/*.csv
